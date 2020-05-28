@@ -1,2 +1,1 @@
-# sa_text_minimal
-SA-Text paper (Simple but Accurate Text Detection)
+### A Pytorch implementation of DB-Text paper
