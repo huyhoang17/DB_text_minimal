@@ -2,6 +2,7 @@ import os
 import glob
 import math
 
+import hydra
 import cv2
 import numpy as np
 from shapely.geometry import Polygon
@@ -9,7 +10,6 @@ from torch.utils.data import Dataset, DataLoader
 import imgaug.augmenters as iaa
 import pyclipper
 
-from consts import (TT_TRAIN_DIR, TT_TRAIN_GT_DIR)
 import db_transforms
 
 
@@ -31,6 +31,7 @@ class TotalTextDatasetIter(Dataset):
     """
     Data iteration for TotalText dataset
     """
+
     def __init__(self,
                  image_paths,
                  gt_paths,
@@ -176,14 +177,23 @@ class TotalTextDatasetIter(Dataset):
         return image_path, img, gt, mask, thresh_map, thresh_mask
 
 
-if __name__ == '__main__':
-
-    image_paths, gt_paths = load_metadata(TT_TRAIN_DIR, TT_TRAIN_GT_DIR)
+@hydra.main(config_path="../config.yaml", strict=False)
+def run(cfg):
+    image_paths, gt_paths = load_metadata(
+        cfg.data.totaltext.train_dir,
+        cfg.data.totaltext.train_gt_dir
+    )
     totaltext_train_iter = TotalTextDatasetIter(image_paths,
                                                 gt_paths,
                                                 debug=False)
-    totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
-                                        batch_size=2,
-                                        shuffle=True,
-                                        num_workers=1)
+    totaltext_train_loader = DataLoader(
+        dataset=totaltext_train_iter,
+        batch_size=2,
+        shuffle=True,
+        num_workers=1
+    )
     print(len(next(iter(totaltext_train_loader))))
+
+
+if __name__ == '__main__':
+    run()

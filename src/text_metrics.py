@@ -3,7 +3,8 @@
 import numpy as np
 
 
-class runningScore(object):
+class running_score:
+
     def __init__(self, n_classes):
         self.n_classes = n_classes
         self.confusion_matrix = np.zeros((n_classes, n_classes))
@@ -13,13 +14,14 @@ class runningScore(object):
 
         if np.sum((label_pred[mask] < 0)) > 0:
             print(label_pred[label_pred < 0])
-        hist = np.bincount(n_class * label_true[mask].astype(int) +
-                           label_pred[mask],
-                           minlength=n_class**2).reshape(n_class, n_class)
+        hist = np.bincount(
+            n_class * label_true[mask].astype(int) + label_pred[mask],
+            minlength=n_class**2
+        ).reshape(n_class, n_class)
+
         return hist
 
     def update(self, label_trues, label_preds):
-        # print label_trues.dtype, label_preds.dtype
         for lt, lp in zip(label_trues, label_preds):
             try:
                 self.confusion_matrix += self._fast_hist(
