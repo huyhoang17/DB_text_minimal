@@ -14,5 +14,5 @@
 - Convert code to pytorch-lightning
 - Serve model with Torchserve
 - Add callbacks
-- Add metric (P/R/F1 | PascalVOC / DetEval)
+- Add metric (P/R/F1 | PascalVOC/DetEval)
 - Model pruning

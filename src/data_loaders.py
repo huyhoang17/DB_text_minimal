@@ -110,7 +110,7 @@ class TotalTextDatasetIter(Dataset):
 
         img, anns = db_transforms.resize(self.image_size, img, anns)
 
-        anns = [ann for ann in anns if Polygon(ann['poly']).is_valid]
+        anns = [ann for ann in anns if Polygon(ann['poly']).buffer(0).is_valid]
         gt = np.zeros((self.image_size, self.image_size),
                       dtype=np.float32)  # batch_gts
         mask = np.ones((self.image_size, self.image_size), dtype=np.float32)
@@ -147,8 +147,7 @@ class TotalTextDatasetIter(Dataset):
                     continue
                 else:
                     shrinked = np.array(shrinked[0]).reshape(-1, 2)
-                    if shrinked.shape[0] > 2 and Polygon(shrinked).buffer(
-                            0).is_valid:
+                    if shrinked.shape[0] > 2 and Polygon(shrinked).buffer(0).is_valid:  # noqa
                         cv2.fillPoly(gt, [shrinked.astype(np.int32)], 1)
                     else:
                         cv2.fillPoly(mask,
