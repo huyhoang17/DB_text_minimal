@@ -21,19 +21,25 @@ def setup_determinism(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
-def setup_logger(log_file_path=None):
+def setup_logger(logger_name='dbtext',
+                 log_file_path=None):
     logging._warn_preinit_stderr = 0
-    logger = logging.getLogger('DB_text_minimal')
+    logger = logging.getLogger(logger_name)
     formatter = logging.Formatter(
-        '%(asctime)s %(name)s %(levelname)s: %(message)s')
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+        '%(asctime)s %(name)s %(levelname)s: %(message)s'
+    )
+
+    # handlers
+    # ch = logging.StreamHandler()
+    # ch.setFormatter(formatter)
+    # logger.addHandler(ch)
+
     if log_file_path is not None:
         file_handle = logging.FileHandler(log_file_path)
         file_handle.setFormatter(formatter)
         logger.addHandler(file_handle)
     logger.setLevel(logging.DEBUG)
+
     return logger
 
 

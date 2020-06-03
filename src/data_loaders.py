@@ -140,7 +140,6 @@ class TotalTextDatasetIter(Dataset):
                 padding.AddPath(subject, pyclipper.JT_ROUND,
                                 pyclipper.ET_CLOSEDPOLYGON)
                 shrinked = padding.Execute(-distance)
-                #                 print(np.array(shrinked).shape)
 
                 if len(shrinked) == 0:
                     cv2.fillPoly(mask,

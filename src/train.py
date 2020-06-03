@@ -24,7 +24,6 @@ from utils import (
     minmax_scaler_img
 )
 
-
 warnings.filterwarnings('ignore')
 
 
@@ -66,14 +65,14 @@ def main(cfg):
 
     # setup logger
     logger = setup_logger(
-        os.path.join(cfg.meta.root_dir, "train.log")
+        os.path.join(cfg.meta.root_dir, cfg.logging.logger_file)
     )
 
     # setup log folder
     log_dir_path = os.path.join(cfg.meta.root_dir, "logs")
     if not os.path.exists(log_dir_path):
         os.makedirs(log_dir_path)
-    tfb_log_dir = os.path.join(log_dir_path, str(time.time()))
+    tfb_log_dir = os.path.join(log_dir_path, str(int(time.time())))
     logger.info(tfb_log_dir)
     if not os.path.exists(tfb_log_dir):
         os.makedirs(tfb_log_dir)
@@ -117,6 +116,7 @@ def main(cfg):
     totaltext_train_loader, totaltext_test_loader = get_data_loaders(cfg)
 
     # train model
+    logger.info("Start training!")
     torch.cuda.empty_cache()
     gc.collect()
     global_steps = 0
@@ -178,8 +178,8 @@ def main(cfg):
             if global_steps % cfg.hps.log_iter == 0:
                 logger.info("[{}-{}] - lr: {} - loss: {} - acc: {} - iou: {}".format(  # noqa
                     epoch + 1, global_steps, lr,
-                    total_loss, acc, iou_shrink_map)
-                )
+                    total_loss, acc, iou_shrink_map
+                ))
 
         end_epoch_loss = train_loss / len(totaltext_train_loader)
         logger.info("Train loss: {}".format(end_epoch_loss))
@@ -260,14 +260,16 @@ def main(cfg):
                                       test_iou_shrink_map, global_steps)
 
         test_loss = test_loss / len(totaltext_test_loader)
-        logger.info("[{}] - test_loss: {}".format(global_steps, test_loss))
+        logger.info("[{}] - test_loss: {}".format(
+            global_steps, test_loss)
+        )
 
         if test_loss <= best_test_loss and train_loss < best_train_loss:
             best_test_loss = test_loss
             best_train_loss = train_loss
             torch.save(
                 dbnet.state_dict(),
-                os.path.join(cfg.meta.root_dir, "models/best_cps.pth")
+                os.path.join(cfg.meta.root_dir, cfg.model.best_cp_path)
             )
 
         if lrs_mode == 'reduce':
@@ -278,7 +280,7 @@ def main(cfg):
     logger.info("Training completed")
     torch.save(
         dbnet.state_dict(),
-        os.path.join(cfg.meta.root_dir, "models/last_cps.pth")
+        os.path.join(cfg.meta.root_dir, cfg.model.last_cp_path)
     )
     logger.info("Saved model")
 
