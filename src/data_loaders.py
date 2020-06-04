@@ -31,10 +31,10 @@ class TotalTextDatasetIter(Dataset):
     """
     Data iteration for TotalText dataset
     """
-
     def __init__(self,
                  image_paths,
                  gt_paths,
+                 is_training=True,
                  image_size=600,
                  dataset='totaltext',
                  min_text_size=8,
@@ -48,12 +48,16 @@ class TotalTextDatasetIter(Dataset):
         self.image_paths = image_paths
         self.gt_paths = gt_paths
 
+        self.is_training = is_training
         self.image_size = image_size
         self.min_text_size = min_text_size
         self.shrink_ratio = shrink_ratio
         self.thresh_min = thresh_min
         self.thresh_max = thresh_max
         self.augment = augment
+        if self.augment is None:
+            self.augment = self._get_default_augment()
+
         self.mean = mean
 
         self.all_anns = self.load_all_anns(gt_paths, dataset)
@@ -103,7 +107,7 @@ class TotalTextDatasetIter(Dataset):
             print(len(anns))
 
         img = cv2.imread(image_path)[:, :, ::-1]
-        if self.augment is not None:
+        if self.is_training:
             augment_seq = self.augment.to_deterministic()
             img, anns = db_transforms.transform(augment_seq, img, anns)
             img, anns = db_transforms.crop(img, anns)
@@ -147,7 +151,8 @@ class TotalTextDatasetIter(Dataset):
                     continue
                 else:
                     shrinked = np.array(shrinked[0]).reshape(-1, 2)
-                    if shrinked.shape[0] > 2 and Polygon(shrinked).buffer(0).is_valid:  # noqa
+                    if shrinked.shape[0] > 2 and Polygon(shrinked).buffer(
+                            0).is_valid:  # noqa
                         cv2.fillPoly(gt, [shrinked.astype(np.int32)], 1)
                     else:
                         cv2.fillPoly(mask,
@@ -177,19 +182,15 @@ class TotalTextDatasetIter(Dataset):
 
 @hydra.main(config_path="../config.yaml", strict=False)
 def run(cfg):
-    image_paths, gt_paths = load_metadata(
-        cfg.data.totaltext.train_dir,
-        cfg.data.totaltext.train_gt_dir
-    )
+    image_paths, gt_paths = load_metadata(cfg.data.totaltext.train_dir,
+                                          cfg.data.totaltext.train_gt_dir)
     totaltext_train_iter = TotalTextDatasetIter(image_paths,
                                                 gt_paths,
                                                 debug=False)
-    totaltext_train_loader = DataLoader(
-        dataset=totaltext_train_iter,
-        batch_size=2,
-        shuffle=True,
-        num_workers=1
-    )
+    totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
+                                        batch_size=2,
+                                        shuffle=True,
+                                        num_workers=1)
     print(len(next(iter(totaltext_train_loader))))
 
 

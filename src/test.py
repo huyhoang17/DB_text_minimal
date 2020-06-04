@@ -55,19 +55,14 @@ def test_preprocess(img_fp,
 def load_model():
     dbnet = DBTextModel().to(device)
     dbnet.load_state_dict(
-        torch.load("./models/best_cps.pth", map_location=device),
-    )
+        torch.load("./models/best_cps.pth", map_location=device))
     return dbnet
 
 
 def load_args():
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument(
-        '--image_path', type=str
-    )
-    parser.add_argument(
-        '--prob_thred', type=float, default=0.3
-    )
+    parser.add_argument('--image_path', type=str)
+    parser.add_argument('--prob_thred', type=float, default=0.3)
     args = parser.parse_args()
     return args
 
@@ -76,9 +71,7 @@ def main(net, args):
     img_path = args.image_path.replace("file://", "")
     img_fn = img_path.split("/")[-1]
     assert os.path.exists(img_path)
-    tmp_img = test_preprocess(
-        img_path, to_tensor=True, pad=True
-    ).to(device)
+    tmp_img = test_preprocess(img_path, to_tensor=True, pad=True).to(device)
 
     net.eval()
     torch.cuda.empty_cache()
@@ -94,7 +87,8 @@ def main(net, args):
     pred_prob[pred_prob <= args.prob_thred] = 0
     pred_prob[pred_prob > args.prob_thred] = 1
 
-    np_img = minmax_scaler_img(tmp_img[0].to(device).numpy().transpose((1, 2, 0)))  # noqa
+    np_img = minmax_scaler_img(tmp_img[0].to(device).numpy().transpose(
+        (1, 2, 0)))  # noqa
     plt.imshow(np_img)
     plt.imshow(pred_prob, cmap='jet', alpha=0.5)
     plt.savefig('./assets/{}'.format(img_fn), bbox_inches='tight')
