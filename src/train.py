@@ -1,13 +1,13 @@
 import os
 import gc
 import time
+import random
 import warnings
 
 import hydra
 from tqdm import tqdm
 import numpy as np
 import torch
-import torchvision.utils as torch_utils
 import torch.optim as torch_optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -17,13 +17,7 @@ from losses import DBLoss
 from lr_schedulers import WarmupPolyLR
 from models import DBTextModel
 from text_metrics import (cal_text_score, running_score)
-from utils import (
-    setup_determinism,
-    setup_logger,
-    to_device,
-    minmax_scaler_img
-)
-
+from utils import (setup_determinism, setup_logger, to_device, visualize_tfb)
 
 warnings.filterwarnings('ignore')
 
@@ -32,20 +26,18 @@ def get_data_loaders(cfg):
 
     # train
     tt_train_img_fps, tt_train_gt_fps = load_metadata(
-        cfg.data.totaltext.train_dir,
-        cfg.data.totaltext.train_gt_dir
-    )
+        cfg.data.totaltext.train_dir, cfg.data.totaltext.train_gt_dir)
     # test
     tt_test_img_fps, tt_test_gt_fps = load_metadata(
-        cfg.data.totaltext.test_dir,
-        cfg.data.totaltext.test_gt_dir
-    )
+        cfg.data.totaltext.test_dir, cfg.data.totaltext.test_gt_dir)
 
     totaltext_train_iter = TotalTextDatasetIter(tt_train_img_fps,
                                                 tt_train_gt_fps,
+                                                is_training=True,
                                                 debug=False)
     totaltext_test_iter = TotalTextDatasetIter(tt_test_img_fps,
                                                tt_test_gt_fps,
+                                               is_training=False,
                                                debug=False)
 
     totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
@@ -66,14 +58,13 @@ def main(cfg):
 
     # setup logger
     logger = setup_logger(
-        os.path.join(cfg.meta.root_dir, "train.log")
-    )
+        os.path.join(cfg.meta.root_dir, cfg.logging.logger_file))
 
     # setup log folder
     log_dir_path = os.path.join(cfg.meta.root_dir, "logs")
     if not os.path.exists(log_dir_path):
         os.makedirs(log_dir_path)
-    tfb_log_dir = os.path.join(log_dir_path, str(time.time()))
+    tfb_log_dir = os.path.join(log_dir_path, str(int(time.time())))
     logger.info(tfb_log_dir)
     if not os.path.exists(tfb_log_dir):
         os.makedirs(tfb_log_dir)
@@ -82,19 +73,23 @@ def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(device)
     dbnet = DBTextModel().to(device)
+
+    # load best cp
+    if cfg.model.finetune_cp_path:
+        cp_path = os.path.join(cfg.meta.root_dir, cfg.model.finetune_cp_path)
+        if os.path.exists(cp_path):
+            logger.info("Loading best checkpoint: {}".format(cp_path))
+            dbnet.load_state_dict(torch.load(cp_path, map_location=device))
+
     dbnet.train()
-    criterion = DBLoss(
-        alpha=cfg.optimizer.alpha,
-        beta=cfg.optimizer.beta,
-        negative_ratio=cfg.optimizer.negative_ratio,
-        reduction=cfg.optimizer.reduction
-    ).to(device)
-    db_optimizer = torch_optim.Adam(
-        dbnet.parameters(),
-        lr=cfg.optimizer.lr,
-        weight_decay=cfg.optimizer.weight_decay,
-        amsgrad=cfg.optimizer.amsgrad
-    )
+    criterion = DBLoss(alpha=cfg.optimizer.alpha,
+                       beta=cfg.optimizer.beta,
+                       negative_ratio=cfg.optimizer.negative_ratio,
+                       reduction=cfg.optimizer.reduction).to(device)
+    db_optimizer = torch_optim.Adam(dbnet.parameters(),
+                                    lr=cfg.optimizer.lr,
+                                    weight_decay=cfg.optimizer.weight_decay,
+                                    amsgrad=cfg.optimizer.amsgrad)
 
     # setup model checkpoint
     best_test_loss = np.inf
@@ -102,21 +97,23 @@ def main(cfg):
 
     db_scheduler = None
     lrs_mode = cfg.lrs.mode
+    logger.info("Learning rate scheduler: {}".format(lrs_mode))
     if lrs_mode == 'poly':
-        db_scheduler = WarmupPolyLR(db_optimizer, warmup_iters=100)
+        db_scheduler = WarmupPolyLR(db_optimizer,
+                                    warmup_iters=cfg.lrs.warmup_iters)
     elif lrs_mode == 'reduce':
         db_scheduler = torch_optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=db_optimizer,
             mode='min',
             factor=0.1,
             patience=4,
-            verbose=True
-        )
+            verbose=True)
 
     # get data loaders
     totaltext_train_loader, totaltext_test_loader = get_data_loaders(cfg)
 
     # train model
+    logger.info("Start training!")
     torch.cuda.empty_cache()
     gc.collect()
     global_steps = 0
@@ -139,7 +136,7 @@ def main(cfg):
 
             _batch = torch.stack(
                 [prob_maps, supervision_masks, threshold_maps, text_area_maps])
-            prob_loss, threshold_loss, binary_loss, total_loss = criterion(
+            prob_loss, threshold_loss, binary_loss, prob_threshold_loss, total_loss = criterion(  # noqa
                 preds, _batch)
             db_optimizer.zero_grad()
 
@@ -155,15 +152,17 @@ def main(cfg):
                 prob_maps,
                 supervision_masks,
                 running_metric_text,
-                thred=cfg.metric.thred_text_score
-            )
+                thred=cfg.metric.thred_text_score)
 
             train_loss += total_loss
             acc = score_shrink_map['Mean Acc']
             iou_shrink_map = score_shrink_map['Mean IoU']
 
             # tf-board
-            tfb_writer.add_scalar('TRAIN/LOSS/loss', total_loss, global_steps)
+            tfb_writer.add_scalar('TRAIN/LOSS/total_loss', total_loss,
+                                  global_steps)
+            tfb_writer.add_scalar('TRAIN/LOSS/loss', prob_threshold_loss,
+                                  global_steps)
             tfb_writer.add_scalar('TRAIN/LOSS/prob_loss', prob_loss,
                                   global_steps)
             tfb_writer.add_scalar('TRAIN/LOSS/threshold_loss', threshold_loss,
@@ -176,10 +175,11 @@ def main(cfg):
             tfb_writer.add_scalar('TRAIN/HPs/lr', lr, global_steps)
 
             if global_steps % cfg.hps.log_iter == 0:
-                logger.info("[{}-{}] - lr: {} - loss: {} - acc: {} - iou: {}".format(  # noqa
-                    epoch + 1, global_steps, lr,
-                    total_loss, acc, iou_shrink_map)
-                )
+                logger.info(
+                    "[{}-{}] - lr: {} - total_loss: {} - loss: {} - acc: {} - iou: {}"
+                    .format(  # noqa
+                        epoch + 1, global_steps, lr, total_loss,
+                        prob_threshold_loss, acc, iou_shrink_map))
 
         end_epoch_loss = train_loss / len(totaltext_train_loader)
         logger.info("Train loss: {}".format(end_epoch_loss))
@@ -187,45 +187,18 @@ def main(cfg):
 
         # TFB IMGs
         prob_threshold = cfg.metric.prob_threshold
-
-        # origin img
-        # imgs.shape = (batch_size, 3, image_size, image_size)
-        imgs = torch.stack([
-            torch.Tensor(
-                minmax_scaler_img(img_.to('cpu').numpy().transpose((1, 2, 0))))
-            for img_ in imgs
-        ])
-        imgs = torch.Tensor(imgs.numpy().transpose((0, 3, 1, 2)))
-        imgs_grid = torch_utils.make_grid(imgs)
-        imgs_grid = torch.unsqueeze(imgs_grid, 0)
-        # imgs_grid.shape = (3, image_size, image_size * batch_size)
-        tfb_writer.add_images('TRAIN/origin_imgs', imgs_grid, global_steps)
-
-        # pred_prob_map / pred_thresh_map
-        pred_prob_map = preds[:, 0, :, :]
-        pred_threshold_map = preds[:, 1, :, :]
-        pred_prob_map[pred_prob_map <= prob_threshold] = 0
-        pred_prob_map[pred_prob_map > prob_threshold] = 1
-
-        # make grid
-        pred_prob_map = pred_prob_map.unsqueeze(1)
-        pred_threshold_map = pred_threshold_map.unsqueeze(1)
-
-        probs_grid = torch_utils.make_grid(pred_prob_map, padding=0)
-        probs_grid = torch.unsqueeze(probs_grid, 0)
-        probs_grid = probs_grid.detach().to('cpu')
-
-        thres_grid = torch_utils.make_grid(pred_threshold_map, padding=0)
-        thres_grid = torch.unsqueeze(thres_grid, 0)
-        thres_grid = thres_grid.detach().to('cpu')
-
-        tfb_writer.add_images('TRAIN/prob_imgs', probs_grid, global_steps)
-        tfb_writer.add_images('TRAIN/thres_imgs', thres_grid, global_steps)
+        visualize_tfb(tfb_writer,
+                      imgs,
+                      preds,
+                      global_steps=global_steps,
+                      prob_threshold=prob_threshold,
+                      mode="TRAIN")
 
         # EVAL
         dbnet.eval()
         test_loss = 0
-        for val_batch_index, test_batch in tqdm(
+        test_visualize_index = random.choice(range(len(totaltext_test_loader)))
+        for test_batch_index, test_batch in tqdm(
                 enumerate(totaltext_test_loader),
                 total=len(totaltext_test_loader)):
 
@@ -243,13 +216,21 @@ def main(cfg):
                 test_total_loss = criterion(test_preds, _batch)
                 test_loss += test_total_loss
 
+                # visualize predicted image with tfb
+                if test_batch_index == test_visualize_index:
+                    visualize_tfb(tfb_writer,
+                                  imgs,
+                                  test_preds,
+                                  global_steps=global_steps,
+                                  prob_threshold=prob_threshold,
+                                  mode="TEST")
+
                 test_score_shrink_map = cal_text_score(
                     test_preds[:, 0, :, :],
                     prob_maps,
                     supervision_masks,
                     running_metric_text,
-                    thred=cfg.metric.thred_text_score
-                )
+                    thred=cfg.metric.thred_text_score)
                 test_acc = test_score_shrink_map['Mean Acc']
                 test_iou_shrink_map = test_score_shrink_map['Mean IoU']
                 tfb_writer.add_scalar('TEST/LOSS/val_loss', test_total_loss,
@@ -265,10 +246,8 @@ def main(cfg):
         if test_loss <= best_test_loss and train_loss < best_train_loss:
             best_test_loss = test_loss
             best_train_loss = train_loss
-            torch.save(
-                dbnet.state_dict(),
-                os.path.join(cfg.meta.root_dir, "models/best_cps.pth")
-            )
+            torch.save(dbnet.state_dict(),
+                       os.path.join(cfg.meta.root_dir, cfg.model.best_cp_path))
 
         if lrs_mode == 'reduce':
             db_scheduler.step(test_loss)
@@ -276,10 +255,8 @@ def main(cfg):
         gc.collect()
 
     logger.info("Training completed")
-    torch.save(
-        dbnet.state_dict(),
-        os.path.join(cfg.meta.root_dir, "models/last_cps.pth")
-    )
+    torch.save(dbnet.state_dict(),
+               os.path.join(cfg.meta.root_dir, cfg.model.last_cp_path))
     logger.info("Saved model")
 
 

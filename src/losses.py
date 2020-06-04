@@ -131,13 +131,11 @@ class DBLoss(nn.Module):
         #         threshold_loss = l1_loss_fn(threshold_map, threshold_gt_map)
         threshold_loss = self.l1_loss(threshold_map, threshold_gt_map,
                                       text_area_gt_map)
+        prob_threshold_loss = prob_loss + self.beta * threshold_loss
         if preds.size(1) == 3:
             binary_loss = self.dice_loss(appro_binary_map, prob_gt_map,
                                          supervision_mask)
-            total_loss = prob_loss + \
-                self.alpha * binary_loss + \
-                self.beta * threshold_loss
-            return prob_loss, threshold_loss, binary_loss, total_loss
+            total_loss = self.alpha * binary_loss + prob_threshold_loss
+            return prob_loss, threshold_loss, binary_loss, prob_threshold_loss, total_loss  # noqa
         else:
-            total_loss = prob_loss + self.beta * threshold_loss
-            return total_loss
+            return prob_threshold_loss
