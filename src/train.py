@@ -175,10 +175,11 @@ def main(cfg):
             tfb_writer.add_scalar('TRAIN/HPs/lr', lr, global_steps)
 
             if global_steps % cfg.hps.log_iter == 0:
-                logger.info("[{}-{}] - lr: {} - loss: {} - acc: {} - iou: {}".
-                            format(  # noqa
-                                epoch + 1, global_steps, lr, total_loss, acc,
-                                iou_shrink_map))
+                logger.info(
+                    "[{}-{}] - lr: {} - total_loss: {} - loss: {} - acc: {} - iou: {}"
+                    .format(  # noqa
+                        epoch + 1, global_steps, lr, total_loss,
+                        prob_threshold_loss, acc, iou_shrink_map))
 
         end_epoch_loss = train_loss / len(totaltext_train_loader)
         logger.info("Train loss: {}".format(end_epoch_loss))

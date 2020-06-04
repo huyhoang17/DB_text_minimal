@@ -52,10 +52,10 @@ def test_preprocess(img_fp,
     return img
 
 
-def load_model():
+def load_model(model_path):
+    assert os.path.exists(model_path)
     dbnet = DBTextModel().to(device)
-    dbnet.load_state_dict(
-        torch.load("./models/best_cps.pth", map_location=device))
+    dbnet.load_state_dict(torch.load(model_path, map_location=device))
     return dbnet
 
 
@@ -63,6 +63,9 @@ def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--image_path', type=str)
     parser.add_argument('--prob_thred', type=float, default=0.3)
+    parser.add_argument('--model_path',
+                        type=str,
+                        default="./models/best_cp.pth")
     args = parser.parse_args()
     return args
 
@@ -96,7 +99,7 @@ def main(net, args):
 
 
 if __name__ == '__main__':
-    dbnet = load_model()
     args = load_args()
+    dbnet = load_model(args.model_path)
 
     main(dbnet, args)
