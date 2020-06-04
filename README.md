@@ -2,10 +2,24 @@
 
 ### Command
 
+#### Train model
+
+- Modify hyperparameters in config.yaml
+
+```bash
+python3 src/train.py
+```
+
+#### Test model
+
+```bash
+python3 src/test.py --image_path path-to-image
+```
+
 ### TODO
 
 - Support other dataset
-	- [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
+	- [TotalText](https://github.com/cs-chan/Total-Text-Dataset) :heavy_check_mark:
 	- [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
 	- [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
 	- [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
@@ -15,4 +29,6 @@
 - Serve model with Torchserve
 - Add callbacks
 - Add metric (P/R/F1 | PascalVOC/DetEval)
+- Model quantization
 - Model pruning
+- Docker / docker-compose
