@@ -7,7 +7,7 @@ import torch
 
 from models import DBTextModel
 from utils import (device, read_img, test_preprocess, visualize_heatmap,
-                   visualize_polygon)
+                   visualize_polygon, str_to_bool)
 
 
 def load_model(model_path):
@@ -21,17 +21,18 @@ def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--image_path', type=str, default='./assets/foo.jpg')
     parser.add_argument('--prob_thred', type=float, default=0.5)
-    parser.add_argument('--heatmap', type=bool, default=False)
+    parser.add_argument('--heatmap', type=str_to_bool, default=False)
     parser.add_argument('--thresh', type=float, default=0.5)
     parser.add_argument('--unclip_ratio', type=float, default=1.5)
-    parser.add_argument('--is_output_polygon', type=bool, default=False)
+    parser.add_argument('--is_output_polygon', type=str_to_bool, default=False)
 
     parser.add_argument('--alpha', type=float, default=0.6)
     parser.add_argument('--model_path',
                         type=str,
-                        default='./models/best_cp.pth')
+                        default='./models/db_resnet18.pth')
     parser.add_argument('--save_dir', type=str, default='./assets')
     args = parser.parse_args()
+    print(args)
     return args
 
 
