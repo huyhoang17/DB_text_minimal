@@ -105,7 +105,7 @@ def main(cfg):
         db_scheduler = torch_optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=db_optimizer,
             mode='min',
-            factor=0.1,
+            factor=0.5,
             patience=4,
             verbose=True)
 

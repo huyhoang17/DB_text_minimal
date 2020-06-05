@@ -68,6 +68,14 @@ def matplotlib_imshow(img, one_channel=False):
         plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
+def str_to_bool(value):
+    if value.lower() in {'False', 'false', 'f', '0', 'no', 'n'}:
+        return False
+    elif value.lower() in {'True', 'true', 't', '1', 'yes', 'y'}:
+        return True
+    raise ValueError('{} is not a valid boolean value'.format(value))
+
+
 def minmax_scaler_img(img):
     img = ((img - img.min()) * (1 / (img.max() - img.min()) * 255)).astype(
         'uint8')  # noqa
@@ -211,6 +219,9 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds):
     tmp_pred = cv2.resize(preds[0, 0, :, :].numpy(), (w_origin, h_origin))
     plt.imshow(tmp_img)
     plt.imshow(tmp_pred, cmap='inferno', alpha=args.alpha)
-    img_fn = "poly_result_{}".format(img_fn)
+    if args.is_output_polygon:
+        img_fn = "poly_result_{}".format(img_fn)
+    else:
+        img_fn = "rect_result_{}".format(img_fn)
     plt.savefig(os.path.join(args.save_dir, img_fn), bbox_inches='tight')
     gc.collect()
