@@ -15,7 +15,8 @@ test-poly:
 	--heatmap False \
 	--is_output_polygon True \
 	--unclip_ratio 3.0 \
-	--thresh 0.7
+	--thresh 0.3 \
+	--box_thresh 0.7
 
 test-rect:
 	python3 src/test.py --image_path ./assets/foo.jpg \
@@ -23,4 +24,5 @@ test-rect:
 	--heatmap False \
 	--is_output_polygon False \
 	--unclip_ratio 1.5 \
-	--thresh 0.7
+	--thresh 0.3 \
+	--box_thresh 0.7

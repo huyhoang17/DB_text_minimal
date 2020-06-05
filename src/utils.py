@@ -154,8 +154,6 @@ def test_preprocess(img,
                     mean=[103.939, 116.779, 123.68],
                     to_tensor=True,
                     pad=False):
-    if isinstance(img, str):
-        img = read_img(img)
     img = test_resize(img, size=600, pad=pad)
 
     img = img.astype(np.float32)
@@ -198,6 +196,7 @@ def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
 def visualize_polygon(args, img_fn, origin_info, batch, preds):
     img_origin, h_origin, w_origin = origin_info
     seg_obj = SegDetectorRepresenter(thresh=args.thresh,
+                                     box_thresh=args.box_thresh,
                                      unclip_ratio=args.unclip_ratio)
     box_list, score_list = seg_obj(batch,
                                    preds,

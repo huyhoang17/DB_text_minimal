@@ -16,7 +16,7 @@ from data_loaders import (load_metadata, TotalTextDatasetIter)
 from losses import DBLoss
 from lr_schedulers import WarmupPolyLR
 from models import DBTextModel
-from text_metrics import (cal_text_score, running_score)
+from text_metrics import (cal_text_score, RunningScore)
 from utils import (setup_determinism, setup_logger, to_device, visualize_tfb)
 
 warnings.filterwarnings('ignore')
@@ -122,7 +122,7 @@ def main(cfg):
         # TRAINING
         dbnet.train()
         train_loss = 0
-        running_metric_text = running_score(cfg.hps.no_classes)
+        running_metric_text = RunningScore(cfg.hps.no_classes)
         for batch_index, batch in enumerate(totaltext_train_loader):
             lr = db_optimizer.param_groups[0]['lr']
             global_steps += 1
