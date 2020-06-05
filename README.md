@@ -1,4 +1,9 @@
-### A Pytorch implementation of DB-Text paper
+[![](https://forthebadge.com/images/badges/built-by-developers.svg)](https://forthebadge.com)
+[![](http://ForTheBadge.com/images/badges/made-with-python.svg)](https://www.python.org/)
+[![](http://ForTheBadge.com/images/badges/built-with-love.svg)](https://github.com/huyhoang17/DB_text_minimal)
+[![](https://forthebadge.com/images/badges/makes-people-smile.svg)](https://forthebadge.com)
+
+# A Pytorch implementation of DB-Text paper
 
 ### Command
 
@@ -16,6 +21,22 @@ python3 src/train.py
 python3 src/test.py --image_path path-to-image
 ```
 
+- For evaluation metric, please refer to [this](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval) repository
+
+### Results
+
+- Heatmap
+
+![](./assets/heatmap_result_foo.jpg)
+
+- Polygon result
+
+![](./assets/poly_result_foo.jpg)
+
+- Rotated rectangle result
+
+![](./assets/rect_result_foo.jpg)
+
 ### TODO
 
 - Support other dataset
@@ -28,7 +49,12 @@ python3 src/test.py --image_path path-to-image
 - Convert code to pytorch-lightning
 - Serve model with Torchserve
 - Add callbacks
-- Add metric (P/R/F1 | PascalVOC/DetEval)
+- Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval) :heavy_check_mark:
+- Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
 - Model quantization
 - Model pruning
 - Docker / docker-compose
+
+### Reference
+
+- [Evaluation metrics](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval)
