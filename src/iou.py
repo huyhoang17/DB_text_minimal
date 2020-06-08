@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+import pickle
+import argparse
 from collections import namedtuple
 import numpy as np
 from shapely.geometry import Polygon
@@ -11,13 +11,11 @@ class DetectionIoUEvaluator(object):
         self.area_precision_constraint = area_precision_constraint
 
     def evaluate_image(self, gt, pred):
-
         def get_union(pD, pG):
             return Polygon(pD).union(Polygon(pG)).area
 
         def get_intersection_over_union(pD, pG):
             iou = get_intersection(pD, pG) / get_union(pD, pG)
-            print(iou)
             return iou
 
         def get_intersection(pD, pG):
@@ -96,8 +94,9 @@ class DetectionIoUEvaluator(object):
             if dontCare:
                 gtDontCarePolsNum.append(len(gtPols) - 1)
 
-        evaluationLog += "GT polygons: " + str(len(gtPols)) + (" (" + str(len(
-            gtDontCarePolsNum)) + " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
+        evaluationLog += "GT polygons: " + str(len(gtPols)) + (
+            " (" + str(len(gtDontCarePolsNum)) +
+            " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
 
         for n in range(len(pred)):
             points = pred[n]['points']
@@ -118,8 +117,9 @@ class DetectionIoUEvaluator(object):
                         detDontCarePolsNum.append(len(detPols) - 1)
                         break
 
-        evaluationLog += "DET polygons: " + str(len(detPols)) + (" (" + str(len(
-            detDontCarePolsNum)) + " don't care)\n" if len(detDontCarePolsNum) > 0 else "\n")
+        evaluationLog += "DET polygons: " + str(len(detPols)) + (
+            " (" + str(len(detDontCarePolsNum)) +
+            " don't care)\n" if len(detDontCarePolsNum) > 0 else "\n")
 
         if len(gtPols) > 0 and len(detPols) > 0:
             # Calculate IoU and precision matrixs
@@ -135,7 +135,8 @@ class DetectionIoUEvaluator(object):
 
             for gtNum in range(len(gtPols)):
                 for detNum in range(len(detPols)):
-                    if gtRectMat[gtNum] == 0 and detRectMat[detNum] == 0 and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum:
+                    if gtRectMat[gtNum] == 0 and detRectMat[
+                            detNum] == 0 and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum:
                         if iouMat[gtNum, detNum] > self.iou_constraint:
                             gtRectMat[gtNum] = 1
                             detRectMat[detNum] = 1
@@ -196,14 +197,29 @@ class DetectionIoUEvaluator(object):
         methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * \
             methodRecall * methodPrecision / (methodRecall + methodPrecision)
 
-        methodMetrics = {'precision': methodPrecision,
-                         'recall': methodRecall, 'hmean': methodHmean}
+        methodMetrics = {
+            'precision': methodPrecision,
+            'recall': methodRecall,
+            'hmean': methodHmean
+        }
 
         return methodMetrics
 
 
+def load_args():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--iou', type=float, default=0.5)
+    parser.add_argument('--area', type=float, default=0.5)
+
+    args = parser.parse_args()
+    print(args)
+    return args
+
+
 if __name__ == '__main__':
-    evaluator = DetectionIoUEvaluator()
+    args = load_args()
+    evaluator = DetectionIoUEvaluator(iou_constraint=args.iou,
+                                      area_precision_constraint=args.area)
 
     # # pseudo code
     # preds = []
@@ -216,30 +232,39 @@ if __name__ == '__main__':
     #             "ignore": False
     #         }
 
-    gts = [[
-        {
-            'points': [
-                (0, 0), (1, 0), (1, 1), (0, 1),
-                (-1, 1),
-            ],
-            'text': 1234,
-            'ignore': False,
-        },
-        {
-            'points': [(2, 2), (3, 2), (3, 3), (2, 3)],
-            'text': 5678,
-            'ignore': True,
-        }
-    ]]
-    preds = [[
-        {
-            'points': [
-                # (0.1, 0.1), (1, 0), (1, 1), (0, 1)
-            ],
-            'text': 123,
-            'ignore': False,
-        }
-    ]]
+    # gts = [
+    #     [
+    #         {
+    #             'points': [
+    #                 (0, 0), (1, 0), (1, 1), (0, 1),
+    #                 # (-1, 1),
+    #             ],
+    #             'text': 1234,
+    #             'ignore': False,
+    #         },
+    #         {
+    #             'points': [(2, 2), (3, 2), (3, 3), (2, 3)],
+    #             'text': 5678,
+    #             'ignore': True,
+    #         }
+    #     ]
+    # ]
+    # preds = [[
+    #     {
+    #         'points': [
+    #             (0.1, 0.1), (1, 0), (1, 1), (0, 1)
+    #         ],
+    #         'text': 123,
+    #         'ignore': False,
+    #     }
+    # ]]
+
+    with open("./data/result_poly_gts.pkl", "rb") as f:
+        gts = pickle.load(f)
+
+    with open("./data/result_poly_preds.pkl", "rb") as f:
+        preds = pickle.load(f)
+
     results = []
     for gt, pred in zip(gts, preds):
         results.append(evaluator.evaluate_image(gt, pred))

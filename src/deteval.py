@@ -1,330 +1,416 @@
-from os import listdir
-from scipy import io
+import pickle
+import argparse
+from collections import namedtuple
 import numpy as np
-# mask counting version
-# from polygon_wrapper import iod
-# from polygon_wrapper import area_of_intersection
-# from polygon_wrapper import area
-
-# polygon based version
-from polygon_fast import iod
-from polygon_fast import area_of_intersection
-from polygon_fast import area
-from tqdm import tqdm
-
-try:  # python2
-    range = xrange
-except Exception:
-    # python3
-    range = range
-"""
-Input format: y0,x0, ..... yn,xn. Each detection is separated by the end of line token ('\n')'
-"""
-
-input_dir = ''  #detection directory goes here
-gt_dir = ''  #gt directory goes here
-fid_path = ''  #output text file directory goes here
-
-allInputs = listdir(input_dir)
+from shapely.geometry import Polygon
 
 
-def input_reading_mod(input_dir, input):
-    """This helper reads input from txt files"""
-    with open('%s/%s' % (input_dir, input), 'r') as input_fid:
-        pred = input_fid.readlines()
-    det = [x.strip('\n') for x in pred]
-    return det
+class DetectionDetEvalEvaluator(object):
+    def __init__(self,
+                 area_recall_constraint=0.8,
+                 area_precision_constraint=0.4,
+                 ev_param_ind_center_diff_thr=1,
+                 mtype_oo_o=1.0,
+                 mtype_om_o=0.8,
+                 mtype_om_m=1.0):
+
+        self.area_recall_constraint = area_recall_constraint
+        self.area_precision_constraint = area_precision_constraint
+        self.ev_param_ind_center_diff_thr = ev_param_ind_center_diff_thr
+        self.mtype_oo_o = mtype_oo_o
+        self.mtype_om_o = mtype_om_o
+        self.mtype_om_m = mtype_om_m
+
+    def evaluate_image(self, gt, pred):
+        def get_union(pD, pG):
+            return Polygon(pD).union(Polygon(pG)).area
+
+        def get_intersection_over_union(pD, pG):
+            return get_intersection(pD, pG) / get_union(pD, pG)
+
+        def get_intersection(pD, pG):
+            return Polygon(pD).intersection(Polygon(pG)).area
+
+        def one_to_one_match(row, col):
+            cont = 0
+            for j in range(len(recallMat[0])):
+                if recallMat[row,
+                             j] >= self.area_recall_constraint and precisionMat[
+                                 row, j] >= self.area_precision_constraint:
+                    cont = cont + 1
+            if (cont != 1):
+                return False
+            cont = 0
+            for i in range(len(recallMat)):
+                if recallMat[
+                        i, col] >= self.area_recall_constraint and precisionMat[
+                            i, col] >= self.area_precision_constraint:
+                    cont = cont + 1
+            if (cont != 1):
+                return False
+
+            if recallMat[row,
+                         col] >= self.area_recall_constraint and precisionMat[
+                             row, col] >= self.area_precision_constraint:
+                return True
+            return False
+
+        def num_overlaps_gt(gtNum):
+            cont = 0
+            for detNum in range(len(detRects)):
+                if detNum not in detDontCareRectsNum:
+                    if recallMat[gtNum, detNum] > 0:
+                        cont = cont + 1
+            return cont
+
+        def num_overlaps_det(detNum):
+            cont = 0
+            for gtNum in range(len(recallMat)):
+                if gtNum not in gtDontCareRectsNum:
+                    if recallMat[gtNum, detNum] > 0:
+                        cont = cont + 1
+            return cont
+
+        def is_single_overlap(row, col):
+            if num_overlaps_gt(row) == 1 and num_overlaps_det(col) == 1:
+                return True
+            else:
+                return False
+
+        def one_to_many_match(gtNum):
+            many_sum = 0
+            detRects = []
+            for detNum in range(len(recallMat[0])):
+                if gtRectMat[gtNum] == 0 and detRectMat[
+                        detNum] == 0 and detNum not in detDontCareRectsNum:
+                    if precisionMat[gtNum,
+                                    detNum] >= self.area_precision_constraint:
+                        many_sum += recallMat[gtNum, detNum]
+                        detRects.append(detNum)
+            if round(many_sum, 4) >= self.area_recall_constraint:
+                return True, detRects
+            else:
+                return False, []
+
+        def many_to_one_match(detNum):
+            many_sum = 0
+            gtRects = []
+            for gtNum in range(len(recallMat)):
+                if gtRectMat[gtNum] == 0 and detRectMat[
+                        detNum] == 0 and gtNum not in gtDontCareRectsNum:
+                    if recallMat[gtNum, detNum] >= self.area_recall_constraint:
+                        many_sum += precisionMat[gtNum, detNum]
+                        gtRects.append(gtNum)
+            if round(many_sum, 4) >= self.area_precision_constraint:
+                return True, gtRects
+            else:
+                return False, []
+
+        def center_distance(r1, r2):
+            return ((np.mean(r1, axis=0) - np.mean(r2, axis=0))**2).sum()**0.5
+
+        def diag(r):
+            r = np.array(r)
+            return ((r[:, 0].max() - r[:, 0].min())**2 +
+                    (r[:, 1].max() - r[:, 1].min())**2)**0.5
+
+        perSampleMetrics = {}
+
+        recall = 0
+        precision = 0
+        hmean = 0
+        recallAccum = 0.
+        precisionAccum = 0.
+        gtRects = []
+        detRects = []
+        gtPolPoints = []
+        detPolPoints = []
+        gtDontCareRectsNum = [
+        ]  # Array of Ground Truth Rectangles' keys marked as don't Care
+        detDontCareRectsNum = [
+        ]  # Array of Detected Rectangles' matched with a don't Care GT
+        pairs = []
+        evaluationLog = ""
+
+        recallMat = np.empty([1, 1])
+        precisionMat = np.empty([1, 1])
+
+        for n in range(len(gt)):
+            points = gt[n]['points']
+            # transcription = gt[n]['text']
+            dontCare = gt[n]['ignore']
+
+            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+                continue
+
+            gtRects.append(points)
+            gtPolPoints.append(points)
+            if dontCare:
+                gtDontCareRectsNum.append(len(gtRects) - 1)
+
+        evaluationLog += "GT rectangles: " + str(len(gtRects)) + (
+            " (" + str(len(gtDontCareRectsNum)) +
+            " don't care)\n" if len(gtDontCareRectsNum) > 0 else "\n")
+
+        for n in range(len(pred)):
+            points = pred[n]['points']
+
+            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+                continue
+
+            detRect = points
+            detRects.append(detRect)
+            detPolPoints.append(points)
+            if len(gtDontCareRectsNum) > 0:
+                for dontCareRectNum in gtDontCareRectsNum:
+                    dontCareRect = gtRects[dontCareRectNum]
+                    intersected_area = get_intersection(dontCareRect, detRect)
+                    rdDimensions = Polygon(detRect).area
+                    if (rdDimensions == 0):
+                        precision = 0
+                    else:
+                        precision = intersected_area / rdDimensions
+                    if (precision > self.area_precision_constraint):
+                        detDontCareRectsNum.append(len(detRects) - 1)
+                        break
+
+        evaluationLog += "DET rectangles: " + str(len(detRects)) + (
+            " (" + str(len(detDontCareRectsNum)) +
+            " don't care)\n" if len(detDontCareRectsNum) > 0 else "\n")
+
+        if len(gtRects) == 0:
+            recall = 1
+            precision = 0 if len(detRects) > 0 else 1
+
+        if len(detRects) > 0:
+            # Calculate recall and precision matrixs
+            outputShape = [len(gtRects), len(detRects)]
+            recallMat = np.empty(outputShape)
+            precisionMat = np.empty(outputShape)
+            gtRectMat = np.zeros(len(gtRects), np.int8)
+            detRectMat = np.zeros(len(detRects), np.int8)
+            for gtNum in range(len(gtRects)):
+                for detNum in range(len(detRects)):
+                    rG = gtRects[gtNum]
+                    rD = detRects[detNum]
+                    intersected_area = get_intersection(rG, rD)
+                    rgDimensions = Polygon(rG).area
+                    rdDimensions = Polygon(rD).area
+                    recallMat[
+                        gtNum,
+                        detNum] = 0 if rgDimensions == 0 else intersected_area / rgDimensions
+                    precisionMat[
+                        gtNum,
+                        detNum] = 0 if rdDimensions == 0 else intersected_area / rdDimensions
+
+            # Find one-to-one matches
+            evaluationLog += "Find one-to-one matches\n"
+            for gtNum in range(len(gtRects)):
+                for detNum in range(len(detRects)):
+                    if gtRectMat[gtNum] == 0 and detRectMat[
+                            detNum] == 0 and gtNum not in gtDontCareRectsNum and detNum not in detDontCareRectsNum:
+                        match = one_to_one_match(gtNum, detNum)
+                        if match is True:
+                            # in deteval we have to make other validation before mark as one-to-one
+                            if is_single_overlap(gtNum, detNum) is True:
+                                rG = gtRects[gtNum]
+                                rD = detRects[detNum]
+                                normDist = center_distance(rG, rD)
+                                normDist /= diag(rG) + diag(rD)
+                                normDist *= 2.0
+                                if normDist < self.ev_param_ind_center_diff_thr:
+                                    gtRectMat[gtNum] = 1
+                                    detRectMat[detNum] = 1
+                                    recallAccum += self.mtype_oo_o
+                                    precisionAccum += self.mtype_oo_o
+                                    pairs.append({
+                                        'gt': gtNum,
+                                        'det': detNum,
+                                        'type': 'OO'
+                                    })
+                                    evaluationLog += "Match GT #" + \
+                                        str(gtNum) + " with Det #" + \
+                                        str(detNum) + "\n"
+                                else:
+                                    evaluationLog += "Match Discarded GT #" + \
+                                        str(gtNum) + " with Det #" + str(detNum) + \
+                                        " normDist: " + str(normDist) + " \n"
+                            else:
+                                evaluationLog += "Match Discarded GT #" + \
+                                    str(gtNum) + " with Det #" + \
+                                    str(detNum) + " not single overlap\n"
+            # Find one-to-many matches
+            evaluationLog += "Find one-to-many matches\n"
+            for gtNum in range(len(gtRects)):
+                if gtNum not in gtDontCareRectsNum:
+                    match, matchesDet = one_to_many_match(gtNum)
+                    if match is True:
+                        evaluationLog += "num_overlaps_gt=" + \
+                            str(num_overlaps_gt(gtNum))
+                        # in deteval we have to make other validation before mark as one-to-one
+                        if num_overlaps_gt(gtNum) >= 2:
+                            gtRectMat[gtNum] = 1
+                            recallAccum += (self.mtype_oo_o
+                                            if len(matchesDet) == 1 else
+                                            self.mtype_om_o)
+                            precisionAccum += (self.mtype_oo_o
+                                               if len(matchesDet) == 1 else
+                                               self.mtype_om_o *
+                                               len(matchesDet))
+                            pairs.append({
+                                'gt':
+                                gtNum,
+                                'det':
+                                matchesDet,
+                                'type':
+                                'OO' if len(matchesDet) == 1 else 'OM'
+                            })
+                            for detNum in matchesDet:
+                                detRectMat[detNum] = 1
+                            evaluationLog += "Match GT #" + \
+                                str(gtNum) + " with Det #" + \
+                                str(matchesDet) + "\n"
+                        else:
+                            evaluationLog += "Match Discarded GT #" + \
+                                str(gtNum) + " with Det #" + \
+                                str(matchesDet) + " not single overlap\n"
+
+            # Find many-to-one matches
+            evaluationLog += "Find many-to-one matches\n"
+            for detNum in range(len(detRects)):
+                if detNum not in detDontCareRectsNum:
+                    match, matchesGt = many_to_one_match(detNum)
+                    if match is True:
+                        # in deteval we have to make other validation before mark as one-to-one
+                        if num_overlaps_det(detNum) >= 2:
+                            detRectMat[detNum] = 1
+                            recallAccum += (self.mtype_oo_o
+                                            if len(matchesGt) == 1 else
+                                            self.mtype_om_m * len(matchesGt))
+                            precisionAccum += (self.mtype_oo_o
+                                               if len(matchesGt) == 1 else
+                                               self.mtype_om_m)
+                            pairs.append({
+                                'gt':
+                                matchesGt,
+                                'det':
+                                detNum,
+                                'type':
+                                'OO' if len(matchesGt) == 1 else 'MO'
+                            })
+                            for gtNum in matchesGt:
+                                gtRectMat[gtNum] = 1
+                            evaluationLog += "Match GT #" + \
+                                str(matchesGt) + " with Det #" + \
+                                str(detNum) + "\n"
+                        else:
+                            evaluationLog += "Match Discarded GT #" + \
+                                str(matchesGt) + " with Det #" + \
+                                str(detNum) + " not single overlap\n"
+
+            numGtCare = (len(gtRects) - len(gtDontCareRectsNum))
+            if numGtCare == 0:
+                recall = float(1)
+                precision = float(0) if len(detRects) > 0 else float(1)
+            else:
+                recall = float(recallAccum) / numGtCare
+                precision = float(0) if (
+                    len(detRects) - len(detDontCareRectsNum)
+                ) == 0 else float(precisionAccum) / (len(detRects) -
+                                                     len(detDontCareRectsNum))
+            hmean = 0 if (precision + recall) == 0 else 2.0 * \
+                precision * recall / (precision + recall)
+
+        numGtCare = len(gtRects) - len(gtDontCareRectsNum)
+        numDetCare = len(detRects) - len(detDontCareRectsNum)
+
+        perSampleMetrics = {
+            'precision': precision,
+            'recall': recall,
+            'hmean': hmean,
+            'pairs': pairs,
+            'recallMat': [] if len(detRects) > 100 else recallMat.tolist(),
+            'precisionMat':
+            [] if len(detRects) > 100 else precisionMat.tolist(),
+            'gtPolPoints': gtPolPoints,
+            'detPolPoints': detPolPoints,
+            'gtCare': numGtCare,
+            'detCare': numDetCare,
+            'gtDontCare': gtDontCareRectsNum,
+            'detDontCare': detDontCareRectsNum,
+            'recallAccum': recallAccum,
+            'precisionAccum': precisionAccum,
+            'evaluationLog': evaluationLog
+        }
+
+        return perSampleMetrics
+
+    def combine_results(self, results):
+        numGt = 0
+        numDet = 0
+        methodRecallSum = 0
+        methodPrecisionSum = 0
+
+        for result in results:
+            numGt += result['gtCare']
+            numDet += result['detCare']
+            methodRecallSum += result['recallAccum']
+            methodPrecisionSum += result['precisionAccum']
+
+        methodRecall = 0 if numGt == 0 else methodRecallSum / numGt
+        methodPrecision = 0 if numDet == 0 else methodPrecisionSum / numDet
+        methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * \
+            methodRecall * methodPrecision / (methodRecall + methodPrecision)
+
+        methodMetrics = {
+            'precision': methodPrecision,
+            'recall': methodRecall,
+            'hmean': methodHmean
+        }
+
+        return methodMetrics
 
 
-def gt_reading_mod(gt_dir, gt_id):
-    """This helper reads groundtruths from mat files"""
-    gt_id = gt_id.split('.')[0]
-    gt = io.loadmat('%s/poly_gt_%s.mat' % (gt_dir, gt_id))
-    gt = gt['polygt']
-    return gt
+def load_args():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--tp', type=float, default=0.4)
+    parser.add_argument('--tr', type=float, default=0.8)
+
+    args = parser.parse_args()
+    print(args)
+    return args
 
 
-def detection_filtering(detections, groundtruths, threshold=0.5):
-    for gt_id, gt in enumerate(groundtruths):
-        if (gt[5] == '#') and (gt[1].shape[1] > 1):
-            gt_x = list(map(int, np.squeeze(gt[1])))
-            gt_y = list(map(int, np.squeeze(gt[3])))
-            for det_id, detection in enumerate(detections):
-                detection = detection.split(',')
-                detection = list(map(int, detection))
-                det_y = detection[0::2]
-                det_x = detection[1::2]
-                det_gt_iou = iod(det_x, det_y, gt_x, gt_y)
-                if det_gt_iou > threshold:
-                    detections[det_id] = []
+if __name__ == '__main__':
+    args = load_args()
+    evaluator = DetectionDetEvalEvaluator(area_recall_constraint=args.tr,
+                                          area_precision_constraint=args.tp)
+    # list of images
+    # gts = [[{
+    #     'points': [(0, 0), (1, 0), (1, 1), (0, 1)],
+    #     'text': 1234,
+    #     'ignore': False,
+    # }, {
+    #     'points': [(2, 2), (3, 2), (3, 3), (2, 3)],
+    #     'text': 5678,
+    #     'ignore': False,
+    # }]]
+    # preds = [
+    #     [{
+    #         'points': [(0.1, 0.1), (1, 0), (1, 1), (0.5, 1.5), (0, 1)],
+    #         'text': 123,
+    #         'ignore': False,
+    #     }],
+    # ]
 
-            detections[:] = [item for item in detections if item != []]
-    return detections
+    with open("./data/result_poly_gts.pkl", "rb") as f:
+        gts = pickle.load(f)
 
+    with open("./data/result_poly_preds.pkl", "rb") as f:
+        preds = pickle.load(f)
 
-def sigma_calculation(det_x, det_y, gt_x, gt_y):
-    """
-    sigma = inter_area / gt_area
-    """
-    # print(area_of_intersection(det_x, det_y, gt_x, gt_y))
-    return np.round(
-        (area_of_intersection(det_x, det_y, gt_x, gt_y) / area(gt_x, gt_y)), 2)
-
-
-def tau_calculation(det_x, det_y, gt_x, gt_y):
-    """
-    tau = inter_area / det_area
-    """
-    return np.round(
-        (area_of_intersection(det_x, det_y, gt_x, gt_y) / area(det_x, det_y)),
-        2)
-
-
-##############################Initialization###################################
-global_tp = 0
-global_fp = 0
-global_fn = 0
-global_sigma = []
-global_tau = []
-tr = 0.7
-tp = 0.6
-fsc_k = 0.8
-k = 2
-###############################################################################
-
-for input_id in tqdm(allInputs):
-    if (input_id != '.DS_Store') and (input_id != 'Pascal_result.txt') and (
-            input_id != 'Pascal_result_curved.txt') and (input_id != 'Pascal_result_non_curved.txt') and (input_id != 'Deteval_result.txt') and (input_id != 'Deteval_result_curved.txt') \
-            and (input_id != 'Deteval_result_non_curved.txt'):
-        # print(input_id)
-        detections = input_reading_mod(input_dir, input_id)  # load txt
-        groundtruths = gt_reading_mod(gt_dir, input_id)  # load mat
-        detections = detection_filtering(
-            detections,
-            groundtruths)  # filters detections overlapping with DC area
-        dc_id = np.where(groundtruths[:, 5] == '#')
-        groundtruths = np.delete(groundtruths, (dc_id), (0))
-
-        local_sigma_table = np.zeros((groundtruths.shape[0], len(detections)))
-        local_tau_table = np.zeros((groundtruths.shape[0], len(detections)))
-
-        for gt_id, gt in enumerate(groundtruths):
-            if len(detections) > 0:
-                for det_id, detection in enumerate(detections):
-                    detection = detection.split(',')
-                    detection = list(map(int, detection))
-                    det_y = detection[0::2]
-                    det_x = detection[1::2]
-                    gt_x = list(map(int, np.squeeze(gt[1])))
-                    gt_y = list(map(int, np.squeeze(gt[3])))
-
-                    local_sigma_table[gt_id, det_id] = sigma_calculation(
-                        det_x, det_y, gt_x, gt_y)
-                    local_tau_table[gt_id, det_id] = tau_calculation(
-                        det_x, det_y, gt_x, gt_y)
-
-        global_sigma.append(local_sigma_table)
-        global_tau.append(local_tau_table)
-
-global_accumulative_recall = 0
-global_accumulative_precision = 0
-total_num_gt = 0
-total_num_det = 0
-
-
-def one_to_one(local_sigma_table, local_tau_table, local_accumulative_recall,
-               local_accumulative_precision, global_accumulative_recall,
-               global_accumulative_precision, gt_flag, det_flag):
-    for gt_id in range(num_gt):
-        gt_matching_qualified_sigma_candidates = np.where(
-            local_sigma_table[gt_id, :] > tr)
-        gt_matching_num_qualified_sigma_candidates = gt_matching_qualified_sigma_candidates[
-            0].shape[0]
-        gt_matching_qualified_tau_candidates = np.where(
-            local_tau_table[gt_id, :] > tp)
-        gt_matching_num_qualified_tau_candidates = gt_matching_qualified_tau_candidates[
-            0].shape[0]
-
-        det_matching_qualified_sigma_candidates = np.where(
-            local_sigma_table[:, gt_matching_qualified_sigma_candidates[0]] >
-            tr)
-        det_matching_num_qualified_sigma_candidates = det_matching_qualified_sigma_candidates[
-            0].shape[0]
-        det_matching_qualified_tau_candidates = np.where(
-            local_tau_table[:, gt_matching_qualified_tau_candidates[0]] > tp)
-        det_matching_num_qualified_tau_candidates = det_matching_qualified_tau_candidates[
-            0].shape[0]
-
-
-        if (gt_matching_num_qualified_sigma_candidates == 1) and (gt_matching_num_qualified_tau_candidates == 1) and \
-                (det_matching_num_qualified_sigma_candidates == 1) and (det_matching_num_qualified_tau_candidates == 1):
-            global_accumulative_recall = global_accumulative_recall + 1.0
-            global_accumulative_precision = global_accumulative_precision + 1.0
-            local_accumulative_recall = local_accumulative_recall + 1.0
-            local_accumulative_precision = local_accumulative_precision + 1.0
-
-            gt_flag[0, gt_id] = 1
-            matched_det_id = np.where(local_sigma_table[gt_id, :] > tr)
-            det_flag[0, matched_det_id] = 1
-    return local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, gt_flag, det_flag
-
-
-def one_to_many(local_sigma_table, local_tau_table, local_accumulative_recall,
-                local_accumulative_precision, global_accumulative_recall,
-                global_accumulative_precision, gt_flag, det_flag):
-    for gt_id in range(num_gt):
-        #skip the following if the groundtruth was matched
-        if gt_flag[0, gt_id] > 0:
-            continue
-
-        non_zero_in_sigma = np.where(local_sigma_table[gt_id, :] > 0)
-        num_non_zero_in_sigma = non_zero_in_sigma[0].shape[0]
-
-        if num_non_zero_in_sigma >= k:
-            ####search for all detections that overlaps with this groundtruth
-            qualified_tau_candidates = np.where(
-                (local_tau_table[gt_id, :] >= tp) & (det_flag[0, :] == 0))
-            num_qualified_tau_candidates = qualified_tau_candidates[0].shape[0]
-
-            if num_qualified_tau_candidates == 1:
-                if ((local_tau_table[gt_id, qualified_tau_candidates] >= tp)
-                        and (local_sigma_table[gt_id, qualified_tau_candidates]
-                             >= tr)):
-                    #became an one-to-one case
-                    global_accumulative_recall = global_accumulative_recall + 1.0
-                    global_accumulative_precision = global_accumulative_precision + 1.0
-                    local_accumulative_recall = local_accumulative_recall + 1.0
-                    local_accumulative_precision = local_accumulative_precision + 1.0
-
-                    gt_flag[0, gt_id] = 1
-                    det_flag[0, qualified_tau_candidates] = 1
-            elif (np.sum(local_sigma_table[gt_id, qualified_tau_candidates]) >=
-                  tr):
-                gt_flag[0, gt_id] = 1
-                det_flag[0, qualified_tau_candidates] = 1
-
-                global_accumulative_recall = global_accumulative_recall + fsc_k
-                global_accumulative_precision = global_accumulative_precision + num_qualified_tau_candidates * fsc_k
-
-                local_accumulative_recall = local_accumulative_recall + fsc_k
-                local_accumulative_precision = local_accumulative_precision + num_qualified_tau_candidates * fsc_k
-
-    return local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, gt_flag, det_flag
-
-
-def many_to_one(local_sigma_table, local_tau_table, local_accumulative_recall,
-                local_accumulative_precision, global_accumulative_recall,
-                global_accumulative_precision, gt_flag, det_flag):
-    for det_id in range(num_det):
-        # skip the following if the detection was matched
-        if det_flag[0, det_id] > 0:
-            continue
-
-        non_zero_in_tau = np.where(local_tau_table[:, det_id] > 0)
-        num_non_zero_in_tau = non_zero_in_tau[0].shape[0]
-
-        if num_non_zero_in_tau >= k:
-            ####search for all detections that overlaps with this groundtruth
-            qualified_sigma_candidates = np.where(
-                (local_sigma_table[:, det_id] >= tp) & (gt_flag[0, :] == 0))
-            num_qualified_sigma_candidates = qualified_sigma_candidates[
-                0].shape[0]
-
-            if num_qualified_sigma_candidates == 1:
-                if ((local_tau_table[qualified_sigma_candidates, det_id] >= tp)
-                        and
-                    (local_sigma_table[qualified_sigma_candidates, det_id] >=
-                     tr)):
-                    #became an one-to-one case
-                    global_accumulative_recall = global_accumulative_recall + 1.0
-                    global_accumulative_precision = global_accumulative_precision + 1.0
-                    local_accumulative_recall = local_accumulative_recall + 1.0
-                    local_accumulative_precision = local_accumulative_precision + 1.0
-
-                    gt_flag[0, qualified_sigma_candidates] = 1
-                    det_flag[0, det_id] = 1
-            elif (np.sum(local_tau_table[qualified_sigma_candidates, det_id])
-                  >= tp):
-                det_flag[0, det_id] = 1
-                gt_flag[0, qualified_sigma_candidates] = 1
-
-                global_accumulative_recall = global_accumulative_recall + num_qualified_sigma_candidates * fsc_k
-                global_accumulative_precision = global_accumulative_precision + fsc_k
-
-                local_accumulative_recall = local_accumulative_recall + num_qualified_sigma_candidates * fsc_k
-                local_accumulative_precision = local_accumulative_precision + fsc_k
-    return local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, gt_flag, det_flag
-
-
-for idx in range(len(global_sigma)):
-    print(allInputs[idx])
-    local_sigma_table = global_sigma[idx]
-    local_tau_table = global_tau[idx]
-
-    num_gt = local_sigma_table.shape[0]
-    num_det = local_sigma_table.shape[1]
-
-    total_num_gt = total_num_gt + num_gt
-    total_num_det = total_num_det + num_det
-
-    local_accumulative_recall = 0
-    local_accumulative_precision = 0
-    gt_flag = np.zeros((1, num_gt))
-    det_flag = np.zeros((1, num_det))
-
-    #######first check for one-to-one case##########
-    local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, \
-    gt_flag, det_flag = one_to_one(local_sigma_table, local_tau_table,
-                                  local_accumulative_recall, local_accumulative_precision,
-                                  global_accumulative_recall, global_accumulative_precision,
-                                  gt_flag, det_flag)
-
-    #######then check for one-to-many case##########
-    local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, \
-    gt_flag, det_flag = one_to_many(local_sigma_table, local_tau_table,
-                                   local_accumulative_recall, local_accumulative_precision,
-                                   global_accumulative_recall, global_accumulative_precision,
-                                   gt_flag, det_flag)
-
-    #######then check for many-to-one case##########
-    local_accumulative_recall, local_accumulative_precision, global_accumulative_recall, global_accumulative_precision, \
-    gt_flag, det_flag = many_to_one(local_sigma_table, local_tau_table,
-                                    local_accumulative_recall, local_accumulative_precision,
-                                    global_accumulative_recall, global_accumulative_precision,
-                                    gt_flag, det_flag)
-
-    fid = open(fid_path, 'a+')
-    try:
-        local_precision = local_accumulative_precision / num_det
-    except ZeroDivisionError:
-        local_precision = 0
-
-    try:
-        local_recall = local_accumulative_recall / num_gt
-    except ZeroDivisionError:
-        local_recall = 0
-
-    temp = ('%s______/Precision:_%s_______/Recall:_%s\n' %
-            (allInputs[idx], str(local_precision), str(local_recall)))
-    fid.write(temp)
-    fid.close()
-try:
-    recall = global_accumulative_recall / total_num_gt
-except ZeroDivisionError:
-    recall = 0
-
-try:
-    precision = global_accumulative_precision / total_num_det
-except ZeroDivisionError:
-    precision = 0
-
-try:
-    f_score = 2 * precision * recall / (precision + recall)
-except ZeroDivisionError:
-    f_score = 0
-
-fid = open(fid_path, 'a')
-temp = ('Precision:_%s_______/Recall:_%s\n' % (str(precision), str(recall)))
-fid.write(temp)
-fid.close()
-print(temp)
+    results = []
+    for gt, pred in zip(gts, preds):
+        results.append(evaluator.evaluate_image(gt, pred))
+    metrics = evaluator.combine_results(results)
+    print(metrics)

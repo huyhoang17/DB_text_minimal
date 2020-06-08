@@ -1,3 +1,16 @@
+lint:
+	yapf -i src/*.py
+
+ioueval:
+	python3 src/iou.py \
+	--iou 0.4 \
+	--area 0.8
+
+deteval:
+	python3 src/deteval.py \
+	--tp 0.4 \
+	--tr 0.8
+
 train:
 	python3 src/train.py
 

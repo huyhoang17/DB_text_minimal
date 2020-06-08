@@ -27,9 +27,9 @@ def to_list_tuples(sample):
 
 def main(device='cuda'):
 
-    thresh = 0.3
-    box_thresh = 0.70
-    unclip_ratio = 3.0
+    thresh = 0.2  # in paper
+    box_thresh = 0.50
+    unclip_ratio = 2.5
     is_output_polygon = True
 
     dbnet = load_model("./models/db_resnet18.pth", device)
@@ -56,19 +56,21 @@ def main(device='cuda'):
             seg_obj = SegDetectorRepresenter(thresh=thresh,
                                              box_thresh=box_thresh,
                                              unclip_ratio=unclip_ratio)
-            box_list, score_list = seg_obj(
-                batch, preds, is_output_polygon=is_output_polygon)
+            box_list, score_list = seg_obj(batch,
+                                           preds,
+                                           is_output_polygon=is_output_polygon)
             box_list, score_list = box_list[0], score_list[0]
 
             if len(box_list) > 0:
                 if is_output_polygon:
                     idx = [x.sum() > 0 for x in box_list]
                     box_list = [box_list[i] for i, v in enumerate(idx) if v]
-                    score_list = [score_list[i]
-                                  for i, v in enumerate(idx) if v]
+                    score_list = [
+                        score_list[i] for i, v in enumerate(idx) if v
+                    ]
                 else:
-                    idx = box_list.reshape(
-                        box_list.shape[0], -1).sum(axis=1) > 0
+                    idx = box_list.reshape(box_list.shape[0],
+                                           -1).sum(axis=1) > 0
                     box_list, score_list = box_list[idx], score_list[idx]
             else:
                 box_list, score_list = [], []
