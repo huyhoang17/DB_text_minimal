@@ -37,7 +37,6 @@ def load_args():
     parser.add_argument('--alpha', type=float, default=0.6)
 
     args = parser.parse_args()
-    print(args)
     return args
 
 

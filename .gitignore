@@ -1,6 +1,7 @@
 # custom
 config.yaml
 nohup.out
+data/
 logs/
 outputs/
 
