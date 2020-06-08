@@ -51,10 +51,33 @@ def setup_logger(logger_name='dbtext', log_file_path=None):
 
 def to_device(batch, device='cuda'):
     new_batch = []
-    new_batch.append(batch[0])
-    for ele in batch[1:]:
-        new_batch.append(ele.to(device))
+    # new_batch.append(batch[0])
+    # for ele in batch[1:]:
+    #     new_batch.append(ele.to(device))
+
+    for ele in batch:
+        if isinstance(ele, torch.Tensor):
+            new_batch.append(ele.to(device))
+        else:
+            new_batch.append(ele)
     return new_batch
+
+
+def to_list_tuples_coords(anns):
+    new_anns = []
+    for ann in anns:
+        points = []
+        for x, y in ann:
+            points.append((x[0].tolist(), y[0].tolist()))
+        new_anns.append(points)
+    return new_anns
+
+
+def dict_to_device(batch, device='cuda'):
+    for k, v in batch.items():
+        if isinstance(v, torch.Tensor):
+            batch[k] = v.to(device)
+    return batch
 
 
 def matplotlib_imshow(img, one_channel=False):
