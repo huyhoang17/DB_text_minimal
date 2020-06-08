@@ -266,6 +266,7 @@ if __name__ == '__main__':
         preds = pickle.load(f)
 
     results = []
+    # for each images
     for gt, pred in zip(gts, preds):
         results.append(evaluator.evaluate_image(gt, pred))
     metrics = evaluator.combine_results(results)

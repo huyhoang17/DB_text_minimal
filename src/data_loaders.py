@@ -6,11 +6,13 @@ import hydra
 import cv2
 import numpy as np
 from shapely.geometry import Polygon
+import torch
 from torch.utils.data import Dataset, DataLoader
 import imgaug.augmenters as iaa
 import pyclipper
 
 import db_transforms
+from utils import dict_to_device
 
 
 def load_metadata(img_dir, gt_dir):
@@ -127,18 +129,25 @@ class TotalTextDatasetIter(Dataset):
         thresh_mask = np.zeros((self.image_size, self.image_size),
                                dtype=np.float32)
 
+        if self.debug:
+            print(type(anns), len(anns))
+
+        ignore_tags = []
         for ann in anns:
+            # i.e shape = (4, 2) / (6, 2) / ...
             poly = np.array(ann['poly'])
             height = max(poly[:, 1]) - min(poly[:, 1])
             width = max(poly[:, 0]) - min(poly[:, 0])
-            polygon = Polygon(poly)
+            polygon = Polygon(poly).buffer(0)
 
             # generate gt and mask
-            if polygon.area < 1 or min(
+            if polygon.area < 1 or not polygon.is_valid or min(
                     height, width) < self.min_text_size or ann['text'] == '#':
+                ignore_tags.append(True)
                 cv2.fillPoly(mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
                 continue
             else:
+                ignore_tags.append(False)
                 # 6th equation
                 distance = polygon.area * \
                     (1 - np.power(self.shrink_ratio, 2)) / polygon.length
@@ -179,8 +188,21 @@ class TotalTextDatasetIter(Dataset):
 
         img = np.transpose(img, (2, 0, 1))
 
-        # resized_image, prob_map, supervision_mask, threshold_map, text_area_map
-        return image_path, img, gt, mask, thresh_map, thresh_mask
+        # img_path, resized_image, prob_map, supervision_mask, threshold_map, text_area_map
+        data_return = {
+            "image_path": image_path,
+            "img": img,  # resized_image
+            "gt": gt,  # prob_map
+            "mask": mask,  # supervision_mask
+            "thresh_map": thresh_map,
+            "thresh_mask": thresh_mask,  # text_area_map
+        }
+        if not self.is_training:
+            data_return["anns"] = [ann['poly'] for ann in anns]
+            data_return["ignore_tags"] = ignore_tags
+
+        # return image_path, img, gt, mask, thresh_map, thresh_mask
+        return data_return
 
 
 @hydra.main(config_path="../config.yaml", strict=False)
@@ -189,12 +211,22 @@ def run(cfg):
                                           cfg.data.totaltext.train_gt_dir)
     totaltext_train_iter = TotalTextDatasetIter(image_paths,
                                                 gt_paths,
+                                                is_training=False,
                                                 debug=False)
     totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
-                                        batch_size=2,
+                                        batch_size=1,
                                         shuffle=True,
                                         num_workers=1)
-    print(len(next(iter(totaltext_train_loader))))
+    samples = next(iter(totaltext_train_loader))
+    # assert samples['img'].shape[0] == cfg.hps.batch_size
+
+    samples = dict_to_device(samples, device='cuda')
+    # tmp = to_list_tuples_coords(samples['anns'])
+    # ignore_tags = [i[0].tolist() for i in samples['ignore_tags']]
+    for k, v in samples.items():
+        if isinstance(v, torch.Tensor):
+            print(samples[k].device)
+    print(len(samples))
 
 
 if __name__ == '__main__':

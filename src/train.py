@@ -4,6 +4,7 @@ import time
 import random
 import warnings
 
+import cv2
 import hydra
 from tqdm import tqdm
 import numpy as np
@@ -16,10 +17,15 @@ from data_loaders import (load_metadata, TotalTextDatasetIter)
 from losses import DBLoss
 from lr_schedulers import WarmupPolyLR
 from models import DBTextModel
-from text_metrics import (cal_text_score, RunningScore)
-from utils import (setup_determinism, setup_logger, to_device, visualize_tfb)
+from text_metrics import (cal_text_score, RunningScore, QuadMetric)
+from utils import (setup_determinism, setup_logger,
+                   to_device, dict_to_device,
+                   to_list_tuples_coords, visualize_tfb)
+from postprocess import SegDetectorRepresenter
 
 warnings.filterwarnings('ignore')
+# https://github.com/pytorch/pytorch/issues/1355
+cv2.setNumThreads(1)
 
 
 def get_data_loaders(cfg):
@@ -45,9 +51,9 @@ def get_data_loaders(cfg):
                                         shuffle=True,
                                         num_workers=1)
     totaltext_test_loader = DataLoader(dataset=totaltext_test_iter,
-                                       batch_size=cfg.hps.batch_size,
+                                       batch_size=cfg.hps.test_batch_size,
                                        shuffle=False,
-                                       num_workers=1)
+                                       num_workers=0)
     return totaltext_train_loader, totaltext_test_loader
 
 
@@ -94,6 +100,7 @@ def main(cfg):
     # setup model checkpoint
     best_test_loss = np.inf
     best_train_loss = np.inf
+    best_hmean = 0
 
     db_scheduler = None
     lrs_mode = cfg.lrs.mode
@@ -128,14 +135,24 @@ def main(cfg):
             global_steps += 1
 
             # resized_image, prob_map, supervision_mask, threshold_map, text_area_map  # noqa
-            batch = to_device(batch, device=device)
-            img_fps, imgs, prob_maps, supervision_masks, threshold_maps, text_area_maps = batch  # noqa
-
-            preds = dbnet(imgs)
+            # batch = to_device(batch, device=device)
+            batch = dict_to_device(batch, device='cuda')
+            # img_fps, imgs, prob_maps, supervision_masks, threshold_maps, text_area_maps, anns = batch  # noqa
+            preds = dbnet(batch['img'])
             assert preds.size(1) == 3
 
             _batch = torch.stack(
-                [prob_maps, supervision_masks, threshold_maps, text_area_maps])
+                [
+                    # prob_maps,
+                    # supervision_masks,
+                    # threshold_maps,
+                    # text_area_maps
+                    batch['gt'],
+                    batch['mask'],
+                    batch['thresh_map'],
+                    batch['thresh_mask']
+                ]
+            )
             prob_loss, threshold_loss, binary_loss, prob_threshold_loss, total_loss = criterion(  # noqa
                 preds, _batch)
             db_optimizer.zero_grad()
@@ -149,8 +166,10 @@ def main(cfg):
             # acc iou: pred_prob_map, gt_prob_map, supervision map, 0.3
             score_shrink_map = cal_text_score(
                 preds[:, 0, :, :],
-                prob_maps,
-                supervision_masks,
+                # prob_maps,
+                # supervision_masks,
+                batch['gt'],
+                batch['mask'],
                 running_metric_text,
                 thred=cfg.metric.thred_text_score)
 
@@ -188,30 +207,40 @@ def main(cfg):
         # TFB IMGs
         prob_threshold = cfg.metric.prob_threshold
         visualize_tfb(tfb_writer,
-                      imgs,
+                      # imgs,
+                      batch['img'],
                       preds,
                       global_steps=global_steps,
                       prob_threshold=prob_threshold,
                       mode="TRAIN")
 
+        seg_obj = SegDetectorRepresenter(thresh=cfg.hps.thresh,
+                                         box_thresh=cfg.hps.box_thresh,
+                                         unclip_ratio=cfg.hps.unclip_ratio)
+        metric_cls = QuadMetric()
+
         # EVAL
         dbnet.eval()
         test_loss = 0
+        raw_metrics = []
         test_visualize_index = random.choice(range(len(totaltext_test_loader)))
         for test_batch_index, test_batch in tqdm(
                 enumerate(totaltext_test_loader),
                 total=len(totaltext_test_loader)):
 
             with torch.no_grad():
-                test_batch = to_device(test_batch, device=device)
-                img_fps, imgs, prob_maps, supervision_masks, threshold_maps, text_area_maps = test_batch  # noqa
+                # test_batch = to_device(test_batch, device=device)
+                test_batch = dict_to_device(test_batch, 'cuda')
+                # img_fps, imgs, prob_maps, supervision_masks, threshold_maps, text_area_maps, anns = test_batch  # noqa
 
-                test_preds = dbnet(imgs)
+                test_preds = dbnet(test_batch['img'])
                 assert test_preds.size(1) == 2
 
                 _batch = torch.stack([
-                    prob_maps, supervision_masks, threshold_maps,
-                    text_area_maps
+                    test_batch['gt'],
+                    test_batch['mask'],
+                    test_batch['thresh_map'],
+                    test_batch['thresh_mask']
                 ])
                 test_total_loss = criterion(test_preds, _batch)
                 test_loss += test_total_loss
@@ -219,7 +248,7 @@ def main(cfg):
                 # visualize predicted image with tfb
                 if test_batch_index == test_visualize_index:
                     visualize_tfb(tfb_writer,
-                                  imgs,
+                                  test_batch['img'],
                                   test_preds,
                                   global_steps=global_steps,
                                   prob_threshold=prob_threshold,
@@ -227,8 +256,10 @@ def main(cfg):
 
                 test_score_shrink_map = cal_text_score(
                     test_preds[:, 0, :, :],
-                    prob_maps,
-                    supervision_masks,
+                    # prob_maps,
+                    # supervision_masks,
+                    test_batch['gt'],
+                    test_batch['mask'],
                     running_metric_text,
                     thred=cfg.metric.thred_text_score)
                 test_acc = test_score_shrink_map['Mean Acc']
@@ -240,10 +271,40 @@ def main(cfg):
                 tfb_writer.add_scalar('TEST/ACC_IOU/val_iou_shrink_map',
                                       test_iou_shrink_map, global_steps)
 
+                # Cal P/R/Hmean
+                batch_shape = {'shape': [(cfg.hps.img_size, cfg.hps.img_size)]}
+                box_list, score_list = seg_obj(batch_shape,
+                                               test_preds,
+                                               is_output_polygon=True)
+                raw_metric = metric_cls.validate_measure(
+                    test_batch, (box_list, score_list)
+                )
+                raw_metrics.append(raw_metric)
+        metrics = metric_cls.gather_measure(raw_metrics)
+        recall = metrics['recall'].avg
+        precision = metrics['precision'].avg
+        hmean = metrics['fmeasure'].avg
+
+        if hmean >= best_hmean:
+            best_hmean = hmean
+            torch.save(dbnet.state_dict(),
+                       os.path.join(cfg.meta.root_dir, cfg.model.best_hmean_cp_path)  # noqa
+            )
+
+        logger.info("Recall: {} - Precision: {} - HMean: {}".format(
+            recall, precision, hmean
+        ))
+        tfb_writer.add_scalar(
+            'TEST/recall', recall, global_steps)
+        tfb_writer.add_scalar(
+            'TEST/precision', precision, global_steps)
+        tfb_writer.add_scalar(
+            'TEST/hmean', hmean, global_steps)
+
         test_loss = test_loss / len(totaltext_test_loader)
         logger.info("[{}] - test_loss: {}".format(global_steps, test_loss))
 
-        if test_loss <= best_test_loss and train_loss < best_train_loss:
+        if test_loss <= best_test_loss and train_loss <= best_train_loss:
             best_test_loss = test_loss
             best_train_loss = train_loss
             torch.save(dbnet.state_dict(),
