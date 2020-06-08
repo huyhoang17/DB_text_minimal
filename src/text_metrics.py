@@ -3,7 +3,7 @@
 import numpy as np
 
 
-class running_score:
+class RunningScore:
     def __init__(self, n_classes):
         self.n_classes = n_classes
         self.confusion_matrix = np.zeros((n_classes, n_classes))

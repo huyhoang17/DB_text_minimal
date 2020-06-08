@@ -20,19 +20,23 @@ def load_model(model_path):
 def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--image_path', type=str, default='./assets/foo.jpg')
-    parser.add_argument('--prob_thred', type=float, default=0.5)
-    parser.add_argument('--heatmap', type=str_to_bool, default=False)
-    parser.add_argument('--thresh', type=float, default=0.5)
-    parser.add_argument('--unclip_ratio', type=float, default=1.5)
-    parser.add_argument('--is_output_polygon', type=str_to_bool, default=False)
-
-    parser.add_argument('--alpha', type=float, default=0.6)
     parser.add_argument('--model_path',
                         type=str,
                         default='./models/db_resnet18.pth')
     parser.add_argument('--save_dir', type=str, default='./assets')
+
+    # for heatmap
+    parser.add_argument('--prob_thred', type=float, default=0.5)
+
+    # for polygon & rotate rectangle
+    parser.add_argument('--heatmap', type=str_to_bool, default=False)
+    parser.add_argument('--thresh', type=float, default=0.5)
+    parser.add_argument('--box_thresh', type=float, default=0.7)
+    parser.add_argument('--unclip_ratio', type=float, default=1.5)
+    parser.add_argument('--is_output_polygon', type=str_to_bool, default=False)
+    parser.add_argument('--alpha', type=float, default=0.6)
+
     args = parser.parse_args()
-    print(args)
     return args
 
 

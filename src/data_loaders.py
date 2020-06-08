@@ -69,8 +69,11 @@ class TotalTextDatasetIter(Dataset):
         augment_seq = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Affine(rotate=(-10, 10)),
+            iaa.Crop(percent=(0, 0.1)),
+            iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1))),
             iaa.Resize((0.5, 3.0))
-        ])
+        ],
+                                     random_order=True)
         return augment_seq
 
     def load_all_anns(self, gt_paths, dataset='totaltext'):
