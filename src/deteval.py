@@ -375,9 +375,12 @@ def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--tp', type=float, default=0.4)
     parser.add_argument('--tr', type=float, default=0.8)
+    parser.add_argument('--poly_gts_fp', type=str,
+                        default='./data/result_poly_gts.pkl')
+    parser.add_argument('--poly_preds_fp', type=str,
+                        default='./data/result_poly_preds.pkl')
 
     args = parser.parse_args()
-    print(args)
     return args
 
 
@@ -403,10 +406,10 @@ if __name__ == '__main__':
     #     }],
     # ]
 
-    with open("./data/result_poly_gts.pkl", "rb") as f:
+    with open(args.poly_gts_fp, "rb") as f:
         gts = pickle.load(f)
 
-    with open("./data/result_poly_preds.pkl", "rb") as f:
+    with open(args.poly_preds_fp, "rb") as f:
         preds = pickle.load(f)
 
     results = []

@@ -151,18 +151,14 @@ class QuadMetric:
         gt_polygons_batch = to_list_tuples_coords(batch['anns'])
         ignore_tags_batch = [i[0].tolist() for i in batch['ignore_tags']]
         gt = []
-        for gt_polygon, ignore_tag in zip(gt_polygons_batch, ignore_tags_batch):
-            gt.append({
-                'points': gt_polygon,
-                'ignore': ignore_tag
-            })
+        for gt_polygon, ignore_tag in zip(gt_polygons_batch,
+                                          ignore_tags_batch):
+            gt.append({'points': gt_polygon, 'ignore': ignore_tag})
 
         pred = []  # for 1 image
-        for pred_polygon, pred_score in zip(pred_polygons_batch[0], pred_scores_batch[0]):
-            pred.append({
-                'points': pred_polygon,
-                'ignore': False
-            })
+        for pred_polygon, pred_score in zip(pred_polygons_batch[0],
+                                            pred_scores_batch[0]):
+            pred.append({'points': pred_polygon, 'ignore': False})
         results.append(self.evaluator.evaluate_image(gt, pred))
 
         # 4 points only!!!

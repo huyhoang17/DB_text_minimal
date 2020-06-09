@@ -72,7 +72,7 @@ class TotalTextDatasetIter(Dataset):
             iaa.Fliplr(0.5),
             iaa.Affine(rotate=(-10, 10)),
             iaa.Crop(percent=(0, 0.1)),
-            iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1))),
+            iaa.Sometimes(0.2, iaa.GaussianBlur(sigma=(0, 0.1))),
             iaa.Resize((0.5, 3.0))
         ],
                                      random_order=True)

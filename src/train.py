@@ -19,13 +19,12 @@ from lr_schedulers import WarmupPolyLR
 from models import DBTextModel
 from text_metrics import (cal_text_score, RunningScore, QuadMetric)
 from utils import (setup_determinism, setup_logger,
-                   to_device, dict_to_device,
-                   to_list_tuples_coords, visualize_tfb)
+                   dict_to_device, visualize_tfb)
 from postprocess import SegDetectorRepresenter
 
 warnings.filterwarnings('ignore')
 # https://github.com/pytorch/pytorch/issues/1355
-cv2.setNumThreads(1)
+cv2.setNumThreads(0)
 
 
 def get_data_loaders(cfg):
@@ -195,7 +194,7 @@ def main(cfg):
 
             if global_steps % cfg.hps.log_iter == 0:
                 logger.info(
-                    "[{}-{}] - lr: {} - total_loss: {} - loss: {} - acc: {} - iou: {}"
+                    "[{}-{}] - lr: {} - total_loss: {} - loss: {} - acc: {} - iou: {}"  # noqa
                     .format(  # noqa
                         epoch + 1, global_steps, lr, total_loss,
                         prob_threshold_loss, acc, iou_shrink_map))
