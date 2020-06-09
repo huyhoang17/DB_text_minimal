@@ -64,7 +64,7 @@ def cal_text_score(texts,
                    gt_texts,
                    training_masks,
                    running_metric_text,
-                   thred=0.5):
+                   thresh=0.5):
     """
     :param texts: preb_prob_map
     :param gt_texts: gt_prob_map
@@ -72,8 +72,8 @@ def cal_text_score(texts,
     """
     training_masks = training_masks.data.cpu().numpy()
     pred_text = texts.data.cpu().numpy() * training_masks
-    pred_text[pred_text <= thred] = 0
-    pred_text[pred_text > thred] = 1
+    pred_text[pred_text <= thresh] = 0
+    pred_text[pred_text > thresh] = 1
     pred_text = pred_text.astype(np.int32)
     gt_text = gt_texts.data.cpu().numpy() * training_masks
     gt_text = gt_text.astype(np.int32)

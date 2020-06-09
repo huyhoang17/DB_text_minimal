@@ -109,7 +109,7 @@ def visualize_tfb(tfb_writer,
                   imgs,
                   preds,
                   global_steps,
-                  prob_threshold=0.3,
+                  thresh=0.3,
                   mode="TRAIN"):
     # origin img
     # imgs.shape = (batch_size, 3, image_size, image_size)
@@ -128,8 +128,8 @@ def visualize_tfb(tfb_writer,
     # pred_prob_map / pred_thresh_map
     pred_prob_map = preds[:, 0, :, :]
     pred_thred_map = preds[:, 1, :, :]
-    pred_prob_map[pred_prob_map <= prob_threshold] = 0
-    pred_prob_map[pred_prob_map > prob_threshold] = 1
+    pred_prob_map[pred_prob_map <= thresh] = 0
+    pred_prob_map[pred_prob_map > thresh] = 1
 
     # make grid
     pred_prob_map = pred_prob_map.unsqueeze(1)

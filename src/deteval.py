@@ -140,7 +140,9 @@ class DetectionDetEvalEvaluator(object):
             # transcription = gt[n]['text']
             dontCare = gt[n]['ignore']
 
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            # if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0).is_valid or \
+                    not Polygon(points).buffer(0).is_simple:
                 continue
 
             gtRects.append(points)
@@ -155,7 +157,9 @@ class DetectionDetEvalEvaluator(object):
         for n in range(len(pred)):
             points = pred[n]['points']
 
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            # if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0).is_valid or \
+                    not Polygon(points).buffer(0).is_simple:
                 continue
 
             detRect = points
@@ -375,9 +379,11 @@ def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--tp', type=float, default=0.4)
     parser.add_argument('--tr', type=float, default=0.8)
-    parser.add_argument('--poly_gts_fp', type=str,
+    parser.add_argument('--poly_gts_fp',
+                        type=str,
                         default='./data/result_poly_gts.pkl')
-    parser.add_argument('--poly_preds_fp', type=str,
+    parser.add_argument('--poly_preds_fp',
+                        type=str,
                         default='./data/result_poly_preds.pkl')
 
     args = parser.parse_args()

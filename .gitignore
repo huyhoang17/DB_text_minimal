@@ -4,6 +4,8 @@ nohup.out
 data/
 logs/
 outputs/
+assets/*
+!assets/*_foo.jpg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
