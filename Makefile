@@ -14,10 +14,10 @@ deteval:
 train: lint
 	python3 src/train.py
 
-img_path=./assets/foo10.jpg
+img_path=./assets/foo.jpg
 model_path=./models/db_resnet18.pth
 thresh=0.25
-box_thresh=0.45
+box_thresh=0.50
 unclip_ratio=1.5
 
 test-heatmap:

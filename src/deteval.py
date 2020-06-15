@@ -23,13 +23,17 @@ class DetectionDetEvalEvaluator(object):
 
     def evaluate_image(self, gt, pred):
         def get_union(pD, pG):
-            return Polygon(pD).union(Polygon(pG)).area
+            pD = Polygon(pD).buffer(0)
+            pG = Polygon(pG).buffer(0)
+            return pD.union(pG).area
 
         def get_intersection_over_union(pD, pG):
             return get_intersection(pD, pG) / get_union(pD, pG)
 
         def get_intersection(pD, pG):
-            return Polygon(pD).intersection(Polygon(pG)).area
+            pD = Polygon(pD).buffer(0)
+            pG = Polygon(pG).buffer(0)
+            return pD.intersection(pG).area
 
         def one_to_one_match(row, col):
             cont = 0

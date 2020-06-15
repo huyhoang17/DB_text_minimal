@@ -1,6 +1,9 @@
 # custom
 config.yaml
 nohup.out
+*_env/
+env_*/
+tmp/
 data/
 logs/
 outputs/

@@ -31,9 +31,9 @@ def load_args():
     parser.add_argument('--device', type=str, default='cuda')
 
     # for polygon & rotate rectangle
-    parser.add_argument('--thresh', type=float, default=0.2)
+    parser.add_argument('--thresh', type=float, default=0.3)
     parser.add_argument('--box_thresh', type=float, default=0.5)
-    parser.add_argument('--unclip_ratio', type=float, default=2.5)
+    parser.add_argument('--unclip_ratio', type=float, default=1.5)
     parser.add_argument('--is_output_polygon', type=str_to_bool, default=True)
 
     # output

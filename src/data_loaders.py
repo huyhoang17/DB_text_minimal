@@ -38,7 +38,6 @@ class TotalTextDatasetIter(Dataset):
                  gt_paths,
                  is_training=True,
                  image_size=640,
-                 dataset='totaltext',
                  min_text_size=8,
                  shrink_ratio=0.4,
                  thresh_min=0.3,
@@ -62,7 +61,7 @@ class TotalTextDatasetIter(Dataset):
 
         self.mean = mean
 
-        self.all_anns = self.load_all_anns(gt_paths, dataset)
+        self.all_anns = self.load_all_anns(gt_paths)
         assert len(self.image_paths) == len(self.all_anns)
 
         self.debug = debug
@@ -71,13 +70,11 @@ class TotalTextDatasetIter(Dataset):
         augment_seq = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Affine(rotate=(-10, 10)),
-            # iaa.Crop(percent=(0, 0.1)),
-            # iaa.Sometimes(0.2, iaa.GaussianBlur(sigma=(0, 0.1))),
             iaa.Resize((0.5, 3.0))
         ])
         return augment_seq
 
-    def load_all_anns(self, gt_paths, dataset='totaltext'):
+    def load_all_anns(self, gt_paths):
         res = []
         for gt in gt_paths:
             lines = []
@@ -111,7 +108,7 @@ class TotalTextDatasetIter(Dataset):
             print(len(anns))
 
         img = cv2.imread(image_path)[:, :, ::-1]
-        if self.is_training:
+        if self.is_training and self.augment is not None:
             augment_seq = self.augment.to_deterministic()
             img, anns = db_transforms.transform(augment_seq, img, anns)
             img, anns = db_transforms.crop(img, anns)
@@ -213,7 +210,7 @@ def run(cfg):
                                           cfg.data.totaltext.train_gt_dir)
     totaltext_train_iter = TotalTextDatasetIter(image_paths,
                                                 gt_paths,
-                                                is_training=False,
+                                                is_training=True,
                                                 debug=False)
     totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
                                         batch_size=1,
@@ -227,8 +224,8 @@ def run(cfg):
     import matplotlib.pyplot as plt
     plt.figure()
     plt.imshow(minmax_scaler_img(samples['img'][0].numpy().transpose(1, 2, 0)))
-    plt.imshow(samples['prob_map'][0], cmap='jet', alpha=0.5)
-    plt.imshow(samples['thresh_map'][0], cmap='jet', alpha=0.7)
+    plt.imshow(samples['prob_map'][0], cmap='jet', alpha=0.35)
+    plt.imshow(samples['thresh_map'][0], cmap='jet', alpha=0.5)
     # plt.imshow(samples['text_area_map'][0], cmap='jet', alpha=0.5)
     # plt.imshow(samples['supervision_mask'][0], cmap='jet', alpha=0.5)
     plt.savefig(os.path.join(cfg.meta.root_dir, 'tmp/foo.jpg'),

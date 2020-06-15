@@ -38,10 +38,12 @@ def get_data_loaders(cfg):
 
     totaltext_train_iter = TotalTextDatasetIter(tt_train_img_fps,
                                                 tt_train_gt_fps,
+                                                image_size=cfg.hps.img_size,
                                                 is_training=True,
                                                 debug=False)
     totaltext_test_iter = TotalTextDatasetIter(tt_test_img_fps,
                                                tt_test_gt_fps,
+                                               image_size=cfg.hps.img_size,
                                                is_training=False,
                                                debug=False)
 
@@ -59,7 +61,7 @@ def get_data_loaders(cfg):
 def main(cfg):
 
     # set determinism
-    setup_determinism(42)
+    # setup_determinism(42)
 
     # setup logger
     logger = setup_logger(
@@ -180,9 +182,6 @@ def main(cfg):
             tfb_writer.add_scalar('TRAIN/HPs/lr', lr, global_steps)
 
             if global_steps % cfg.hps.log_iter == 0:
-                # logger.info(
-                #     "total_loss: {} - loss: {}"  # noqa
-                #     .format(total_loss, prob_threshold_loss))
                 logger.info(
                     "[{}-{}] - lr: {} - total_loss: {} - loss: {} - acc: {} - iou: {}"  # noqa
                     .format(epoch + 1, global_steps, lr, total_loss,
@@ -273,8 +272,9 @@ def main(cfg):
                 dbnet.state_dict(),
                 os.path.join(cfg.meta.root_dir, cfg.model.best_hmean_cp_path))
 
-        logger.info("Recall: {} - Precision: {} - HMean: {}".format(
-            recall, precision, hmean))
+        logger.info(
+            "TEST/Recall: {} - TEST/Precision: {} - TEST/HMean: {}".format(
+                recall, precision, hmean))
         tfb_writer.add_scalar('TEST/recall', recall, global_steps)
         tfb_writer.add_scalar('TEST/precision', precision, global_steps)
         tfb_writer.add_scalar('TEST/hmean', hmean, global_steps)
