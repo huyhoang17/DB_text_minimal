@@ -1,0 +1,67 @@
+meta:
+  root_dir: 
+  round_number: 8
+  debug: False
+  device: cuda
+  test_device: cpu
+
+hps:
+  batch_size: 4
+  test_batch_size: 1  # must be set to 1 to evaluate metric
+  img_size: 640
+  no_epochs: 50
+  warmup_epochs: 10
+  no_classes: 2
+  log_iter: 50
+
+lrs:
+  mode: reduce  # reduce / poly
+  warmup_iters: 10
+  factor: 0.2
+  patience: 4
+
+augmentation:
+
+callbacks:
+
+data:
+  totaltext:
+    train_dir: 
+    test_dir: 
+    train_gt_dir: 
+    test_gt_dir: 
+
+dataset:
+  return_dict: True
+
+logging:
+  logger_file: train.log
+
+loss:
+
+model:
+
+optimizer:
+  type: adam
+  lr: 0.005
+  lr_finetune: 0.005
+  weight_decay: 0.0
+  reduction: mean
+  alpha: 1
+  beta: 10
+  negative_ratio: 3
+  amsgrad: False
+
+metric:
+  thred_text_score: 0.30
+  prob_threshold: 0.50
+  unclip_ratio: 1.50
+  is_output_polygon: True
+
+private:
+
+scheduler:
+
+trainer:
+
+training:
