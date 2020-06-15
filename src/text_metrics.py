@@ -64,7 +64,7 @@ def cal_text_score(texts,
                    gt_texts,
                    training_masks,
                    running_metric_text,
-                   thred=0.5):
+                   thresh=0.5):
     """
     :param texts: preb_prob_map
     :param gt_texts: gt_prob_map
@@ -72,8 +72,8 @@ def cal_text_score(texts,
     """
     training_masks = training_masks.data.cpu().numpy()
     pred_text = texts.data.cpu().numpy() * training_masks
-    pred_text[pred_text <= thred] = 0
-    pred_text[pred_text > thred] = 1
+    pred_text[pred_text <= thresh] = 0
+    pred_text[pred_text > thresh] = 1
     pred_text = pred_text.astype(np.int32)
     gt_text = gt_texts.data.cpu().numpy() * training_masks
     gt_text = gt_text.astype(np.int32)
@@ -151,18 +151,14 @@ class QuadMetric:
         gt_polygons_batch = to_list_tuples_coords(batch['anns'])
         ignore_tags_batch = [i[0].tolist() for i in batch['ignore_tags']]
         gt = []
-        for gt_polygon, ignore_tag in zip(gt_polygons_batch, ignore_tags_batch):
-            gt.append({
-                'points': gt_polygon,
-                'ignore': ignore_tag
-            })
+        for gt_polygon, ignore_tag in zip(gt_polygons_batch,
+                                          ignore_tags_batch):
+            gt.append({'points': gt_polygon, 'ignore': ignore_tag})
 
         pred = []  # for 1 image
-        for pred_polygon, pred_score in zip(pred_polygons_batch[0], pred_scores_batch[0]):
-            pred.append({
-                'points': pred_polygon,
-                'ignore': False
-            })
+        for pred_polygon, pred_score in zip(pred_polygons_batch[0],
+                                            pred_scores_batch[0]):
+            pred.append({'points': pred_polygon, 'ignore': False})
         results.append(self.evaluator.evaluate_image(gt, pred))
 
         # 4 points only!!!

@@ -1,9 +1,14 @@
 # custom
 config.yaml
 nohup.out
+*_env/
+env_*/
+tmp/
 data/
 logs/
 outputs/
+assets/*
+!assets/*_foo.jpg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

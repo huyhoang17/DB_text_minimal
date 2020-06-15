@@ -11,6 +11,8 @@ def draw_thresh_map(polygon, canvas, mask, shrink_ratio=0.4):
     assert polygon.shape[1] == 2
 
     polygon_shape = Polygon(polygon)
+    if polygon_shape.area <= 0:
+        return
     distance = polygon_shape.area * (
         1 - np.power(shrink_ratio, 2)) / polygon_shape.length
     subject = [tuple(l) for l in polygon]
@@ -48,10 +50,16 @@ def draw_thresh_map(polygon, canvas, mask, shrink_ratio=0.4):
     xmax_valid = min(max(0, xmax), canvas.shape[1] - 1)
     ymin_valid = min(max(0, ymin), canvas.shape[0] - 1)
     ymax_valid = min(max(0, ymax), canvas.shape[0] - 1)
+
+    # canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
+    #     1 - distance_map[ymin_valid - ymin:ymax_valid - ymin + 1,  # add 1
+    #                      xmin_valid - xmin:xmax_valid - xmin + 1  # add 1
+    #                      ],
+    #     canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
+
     canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
-        1 - distance_map[ymin_valid - ymin:ymax_valid - ymin + 1,  # add 1
-                         xmin_valid - xmin:xmax_valid - xmin + 1  # add 1
-                         ],
+        1 - distance_map[ymin_valid - ymin:ymax_valid - ymax +
+                         height, xmin_valid - xmin:xmax_valid - xmax + width],
         canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
 
 

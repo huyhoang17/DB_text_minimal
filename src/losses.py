@@ -72,7 +72,7 @@ class L1Loss(nn.Module):
         self.eps = eps
         self.reduction = reduction
 
-    def forward(self, pred, gt, mask=None):
+    def forward(self, pred, gt, mask):
         if mask is not None:
             loss = (torch.abs(pred - gt) * mask).sum() / \
                 (mask.sum() + self.eps)
@@ -127,8 +127,6 @@ class DBLoss(nn.Module):
 
         # losses
         prob_loss = self.ohem_loss(prob_pred, prob_gt_map, supervision_mask)
-        #         l1_loss_fn = torch.nn.L1Loss(reduction='mean')
-        #         threshold_loss = l1_loss_fn(threshold_map, threshold_gt_map)
         threshold_loss = self.l1_loss(threshold_map, threshold_gt_map,
                                       text_area_gt_map)
         prob_threshold_loss = prob_loss + self.beta * threshold_loss

@@ -12,7 +12,7 @@ import imgaug.augmenters as iaa
 import pyclipper
 
 import db_transforms
-from utils import dict_to_device
+from utils import dict_to_device, minmax_scaler_img
 
 
 def load_metadata(img_dir, gt_dir):
@@ -37,8 +37,7 @@ class TotalTextDatasetIter(Dataset):
                  image_paths,
                  gt_paths,
                  is_training=True,
-                 image_size=600,
-                 dataset='totaltext',
+                 image_size=640,
                  min_text_size=8,
                  shrink_ratio=0.4,
                  thresh_min=0.3,
@@ -62,7 +61,7 @@ class TotalTextDatasetIter(Dataset):
 
         self.mean = mean
 
-        self.all_anns = self.load_all_anns(gt_paths, dataset)
+        self.all_anns = self.load_all_anns(gt_paths)
         assert len(self.image_paths) == len(self.all_anns)
 
         self.debug = debug
@@ -71,14 +70,11 @@ class TotalTextDatasetIter(Dataset):
         augment_seq = iaa.Sequential([
             iaa.Fliplr(0.5),
             iaa.Affine(rotate=(-10, 10)),
-            iaa.Crop(percent=(0, 0.1)),
-            iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1))),
             iaa.Resize((0.5, 3.0))
-        ],
-                                     random_order=True)
+        ])
         return augment_seq
 
-    def load_all_anns(self, gt_paths, dataset='totaltext'):
+    def load_all_anns(self, gt_paths):
         res = []
         for gt in gt_paths:
             lines = []
@@ -112,7 +108,7 @@ class TotalTextDatasetIter(Dataset):
             print(len(anns))
 
         img = cv2.imread(image_path)[:, :, ::-1]
-        if self.is_training:
+        if self.is_training and self.augment is not None:
             augment_seq = self.augment.to_deterministic()
             img, anns = db_transforms.transform(augment_seq, img, anns)
             img, anns = db_transforms.crop(img, anns)
@@ -138,16 +134,16 @@ class TotalTextDatasetIter(Dataset):
             poly = np.array(ann['poly'])
             height = max(poly[:, 1]) - min(poly[:, 1])
             width = max(poly[:, 0]) - min(poly[:, 0])
-            polygon = Polygon(poly).buffer(0)
+            polygon = Polygon(poly)
 
             # generate gt and mask
-            if polygon.area < 1 or not polygon.is_valid or min(
-                    height, width) < self.min_text_size or ann['text'] == '#':
+            if polygon.area < 1 or \
+                    min(height, width) < self.min_text_size or \
+                    ann['text'] == '#':
                 ignore_tags.append(True)
                 cv2.fillPoly(mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
                 continue
             else:
-                ignore_tags.append(False)
                 # 6th equation
                 distance = polygon.area * \
                     (1 - np.power(self.shrink_ratio, 2)) / polygon.length
@@ -158,15 +154,18 @@ class TotalTextDatasetIter(Dataset):
                 shrinked = padding.Execute(-distance)
 
                 if len(shrinked) == 0:
+                    ignore_tags.append(True)
                     cv2.fillPoly(mask,
                                  poly.astype(np.int32)[np.newaxis, :, :], 0)
                     continue
                 else:
                     shrinked = np.array(shrinked[0]).reshape(-1, 2)
-                    if shrinked.shape[0] > 2 and Polygon(shrinked).buffer(
-                            0).is_valid:  # noqa
+                    if shrinked.shape[0] > 2 and \
+                            Polygon(shrinked).buffer(0).is_valid:
+                        ignore_tags.append(False)
                         cv2.fillPoly(gt, [shrinked.astype(np.int32)], 1)
                     else:
+                        ignore_tags.append(True)
                         cv2.fillPoly(mask,
                                      poly.astype(np.int32)[np.newaxis, :, :],
                                      0)
@@ -188,15 +187,15 @@ class TotalTextDatasetIter(Dataset):
 
         img = np.transpose(img, (2, 0, 1))
 
-        # img_path, resized_image, prob_map, supervision_mask, threshold_map, text_area_map
         data_return = {
             "image_path": image_path,
-            "img": img,  # resized_image
-            "gt": gt,  # prob_map
-            "mask": mask,  # supervision_mask
+            "img": img,
+            "prob_map": gt,
+            "supervision_mask": mask,
             "thresh_map": thresh_map,
-            "thresh_mask": thresh_mask,  # text_area_map
+            "text_area_map": thresh_mask,
         }
+        # for batch_size = 1
         if not self.is_training:
             data_return["anns"] = [ann['poly'] for ann in anns]
             data_return["ignore_tags"] = ignore_tags
@@ -211,22 +210,26 @@ def run(cfg):
                                           cfg.data.totaltext.train_gt_dir)
     totaltext_train_iter = TotalTextDatasetIter(image_paths,
                                                 gt_paths,
-                                                is_training=False,
+                                                is_training=True,
                                                 debug=False)
     totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
                                         batch_size=1,
                                         shuffle=True,
                                         num_workers=1)
     samples = next(iter(totaltext_train_loader))
-    # assert samples['img'].shape[0] == cfg.hps.batch_size
-
-    samples = dict_to_device(samples, device='cuda')
-    # tmp = to_list_tuples_coords(samples['anns'])
-    # ignore_tags = [i[0].tolist() for i in samples['ignore_tags']]
+    samples = dict_to_device(samples, device='cpu')
     for k, v in samples.items():
         if isinstance(v, torch.Tensor):
             print(samples[k].device)
-    print(len(samples))
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.imshow(minmax_scaler_img(samples['img'][0].numpy().transpose(1, 2, 0)))
+    plt.imshow(samples['prob_map'][0], cmap='jet', alpha=0.35)
+    plt.imshow(samples['thresh_map'][0], cmap='jet', alpha=0.5)
+    # plt.imshow(samples['text_area_map'][0], cmap='jet', alpha=0.5)
+    # plt.imshow(samples['supervision_mask'][0], cmap='jet', alpha=0.5)
+    plt.savefig(os.path.join(cfg.meta.root_dir, 'tmp/foo.jpg'),
+                bbox_inches='tight')
 
 
 if __name__ == '__main__':

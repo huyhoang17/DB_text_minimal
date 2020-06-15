@@ -23,13 +23,17 @@ class DetectionDetEvalEvaluator(object):
 
     def evaluate_image(self, gt, pred):
         def get_union(pD, pG):
-            return Polygon(pD).union(Polygon(pG)).area
+            pD = Polygon(pD).buffer(0)
+            pG = Polygon(pG).buffer(0)
+            return pD.union(pG).area
 
         def get_intersection_over_union(pD, pG):
             return get_intersection(pD, pG) / get_union(pD, pG)
 
         def get_intersection(pD, pG):
-            return Polygon(pD).intersection(Polygon(pG)).area
+            pD = Polygon(pD).buffer(0)
+            pG = Polygon(pG).buffer(0)
+            return pD.intersection(pG).area
 
         def one_to_one_match(row, col):
             cont = 0
@@ -140,7 +144,9 @@ class DetectionDetEvalEvaluator(object):
             # transcription = gt[n]['text']
             dontCare = gt[n]['ignore']
 
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            # if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0).is_valid or \
+                    not Polygon(points).buffer(0).is_simple:
                 continue
 
             gtRects.append(points)
@@ -155,7 +161,9 @@ class DetectionDetEvalEvaluator(object):
         for n in range(len(pred)):
             points = pred[n]['points']
 
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            # if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0).is_valid or \
+                    not Polygon(points).buffer(0).is_simple:
                 continue
 
             detRect = points
@@ -375,9 +383,14 @@ def load_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--tp', type=float, default=0.4)
     parser.add_argument('--tr', type=float, default=0.8)
+    parser.add_argument('--poly_gts_fp',
+                        type=str,
+                        default='./data/result_poly_gts.pkl')
+    parser.add_argument('--poly_preds_fp',
+                        type=str,
+                        default='./data/result_poly_preds.pkl')
 
     args = parser.parse_args()
-    print(args)
     return args
 
 
@@ -403,10 +416,10 @@ if __name__ == '__main__':
     #     }],
     # ]
 
-    with open("./data/result_poly_gts.pkl", "rb") as f:
+    with open(args.poly_gts_fp, "rb") as f:
         gts = pickle.load(f)
 
-    with open("./data/result_poly_preds.pkl", "rb") as f:
+    with open(args.poly_preds_fp, "rb") as f:
         preds = pickle.load(f)
 
     results = []

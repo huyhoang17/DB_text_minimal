@@ -35,11 +35,6 @@ def setup_logger(logger_name='dbtext', log_file_path=None):
     formatter = logging.Formatter(
         '%(asctime)s %(name)s %(levelname)s: %(message)s')
 
-    # handlers
-    # ch = logging.StreamHandler()
-    # ch.setFormatter(formatter)
-    # logger.addHandler(ch)
-
     if log_file_path is not None:
         file_handle = logging.FileHandler(log_file_path)
         file_handle.setFormatter(formatter)
@@ -51,9 +46,6 @@ def setup_logger(logger_name='dbtext', log_file_path=None):
 
 def to_device(batch, device='cuda'):
     new_batch = []
-    # new_batch.append(batch[0])
-    # for ele in batch[1:]:
-    #     new_batch.append(ele.to(device))
 
     for ele in batch:
         if isinstance(ele, torch.Tensor):
@@ -61,6 +53,13 @@ def to_device(batch, device='cuda'):
         else:
             new_batch.append(ele)
     return new_batch
+
+
+def dict_to_device(batch, device='cuda'):
+    for k, v in batch.items():
+        if isinstance(v, torch.Tensor):
+            batch[k] = v.to(device)
+    return batch
 
 
 def to_list_tuples_coords(anns):
@@ -71,13 +70,6 @@ def to_list_tuples_coords(anns):
             points.append((x[0].tolist(), y[0].tolist()))
         new_anns.append(points)
     return new_anns
-
-
-def dict_to_device(batch, device='cuda'):
-    for k, v in batch.items():
-        if isinstance(v, torch.Tensor):
-            batch[k] = v.to(device)
-    return batch
 
 
 def matplotlib_imshow(img, one_channel=False):
@@ -109,7 +101,7 @@ def visualize_tfb(tfb_writer,
                   imgs,
                   preds,
                   global_steps,
-                  prob_threshold=0.3,
+                  thresh=0.5,
                   mode="TRAIN"):
     # origin img
     # imgs.shape = (batch_size, 3, image_size, image_size)
@@ -128,8 +120,8 @@ def visualize_tfb(tfb_writer,
     # pred_prob_map / pred_thresh_map
     pred_prob_map = preds[:, 0, :, :]
     pred_thred_map = preds[:, 1, :, :]
-    pred_prob_map[pred_prob_map <= prob_threshold] = 0
-    pred_prob_map[pred_prob_map > prob_threshold] = 1
+    pred_prob_map[pred_prob_map <= thresh] = 0
+    pred_prob_map[pred_prob_map > thresh] = 1
 
     # make grid
     pred_prob_map = pred_prob_map.unsqueeze(1)
@@ -149,7 +141,7 @@ def visualize_tfb(tfb_writer,
                           global_steps)
 
 
-def test_resize(img, size=600, pad=False):
+def test_resize(img, size=640, pad=False):
     h, w, c = img.shape
     scale_w = size / w
     scale_h = size / h
@@ -177,7 +169,7 @@ def test_preprocess(img,
                     mean=[103.939, 116.779, 123.68],
                     to_tensor=True,
                     pad=False):
-    img = test_resize(img, size=600, pad=pad)
+    img = test_resize(img, size=640, pad=pad)
 
     img = img.astype(np.float32)
     img[..., 0] -= mean[0]
@@ -191,7 +183,7 @@ def test_preprocess(img,
     return img
 
 
-def draw_bbox(img_path, result, color=(255, 0, 0), thickness=2):
+def draw_bbox(img_path, result, color=(255, 0, 0), thickness=3):
     if isinstance(img_path, str):
         img_path = cv2.imread(img_path)
         # img_path = cv2.cvtColor(img_path, cv2.COLOR_BGR2RGB)
