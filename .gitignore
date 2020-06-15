@@ -7,8 +7,11 @@ tmp/
 data/
 logs/
 outputs/
+notebooks/
+model_store/
 assets/*
 !assets/*_foo.jpg
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
