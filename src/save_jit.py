@@ -2,7 +2,11 @@ import torch
 
 from models import DBTextModel
 
-dbnet = DBTextModel()
+model_path = '/home/phan.huy.hoang/phh_workspace/DB_text_minimal/models/db_resnet18.pth'
+device = 'cpu'
+dbnet = DBTextModel().to(device)
+dbnet.load_state_dict(torch.load(model_path, map_location=device))
+assert not next(dbnet.parameters()).is_cuda
 example_input = torch.rand(1, 3, 640, 640)
 dbnet.eval()
 

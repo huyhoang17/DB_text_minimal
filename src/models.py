@@ -50,4 +50,5 @@ class DBTextModel(nn.Module):
 
 
 if __name__ == '__main__':
-    dbnet = DBTextModel()
+    dbnet = DBTextModel().to('cpu')
+    print(dbnet)

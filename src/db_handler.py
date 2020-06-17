@@ -1,4 +1,6 @@
+import os
 import io
+import imageio
 import logging
 
 import cv2
@@ -48,7 +50,26 @@ def test_preprocess(img,
 
 class DBTextDetectionHandler(BaseHandler):
     def __init__(self):
-        super().__init__()
+        self.model = None
+        self.device = None
+        self.initialized = False
+        self.tmp_dir = "/home/phan.huy.hoang/phh_workspace/DB_text_minimal/tmp"
+
+    def initialize(self, ctx):
+        self.manifest = ctx.manifest
+        properties = ctx.system_properties
+        self.device = torch.device('cpu')
+        model_dir = properties.get("model_dir")
+        serialized_file = self.manifest['model']['serializedFile']
+        model_pt_path = os.path.join(model_dir, serialized_file)
+        assert os.path.exists(model_pt_path)
+        self.model = torch.jit.load(model_pt_path)
+        self.model.to(self.device)
+        self.model.eval()
+
+        logger.debug(
+            'Model file {0} loaded successfully'.format(model_pt_path))
+        self.initialized = True
 
     def preprocess(self, request):
 
@@ -58,18 +79,32 @@ class DBTextDetectionHandler(BaseHandler):
             if image is None:
                 image = data.get("body")
 
-            input_image = Image.fromarray(np.load(io.BytesIO(image)))
-            tensor_img = test_preprocess(input_image)
+            input_image = Image.open(io.BytesIO(image))
+            input_image = np.array(input_image)
+            tensor_img = test_preprocess(input_image, pad=False)
             tensor_imgs.append(tensor_img)
 
         tensor_imgs = torch.cat(tensor_imgs)
         return tensor_imgs
 
     def inference(self, img):
-        return self.model(img.to(self.device))
+        return self.model(img)
 
-    def postprocess(self, inference_output):
-        super().__init__(inference_output)
+    def postprocess(self, data):
+
+        res = []
+        data = data.detach().cpu().numpy()
+        for pred in data:
+            prob_mask = (pred[0] * 255).astype(np.uint8)
+            thresh_mask = (pred[1] * 255).astype(np.uint8)
+            imageio.imwrite(os.path.join(self.tmp_dir, "foo1.jpg"), prob_mask)
+            imageio.imwrite(os.path.join(self.tmp_dir, "foo2.jpg"),
+                            thresh_mask)
+            prob_mask = prob_mask.tolist()
+            thresh_mask = thresh_mask.tolist()
+            res.append({"prob_mask": prob_mask, "thresh_mask": thresh_mask})
+
+        return res
 
 
 _service = DBTextDetectionHandler()

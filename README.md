@@ -83,7 +83,7 @@ make deteval
 	- [ ] [CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
 	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14)
 - [ ] Convert code to pytorch-lightning
-- [ ] Serve model with Torchserve
+- [x] Serve model with Torchserve
 - [x] Add metric callbacks (P/R/F1)
 - [x] Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval)
 - [x] Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
