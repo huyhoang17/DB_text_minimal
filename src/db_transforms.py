@@ -58,8 +58,8 @@ def draw_thresh_map(polygon, canvas, mask, shrink_ratio=0.4):
     #     canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
 
     canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
-        1 - distance_map[ymin_valid - ymin:ymax_valid - ymax +
-                         height, xmin_valid - xmin:xmax_valid - xmax + width],
+        1 - distance_map[ymin_valid - ymin:ymax_valid - ymax + height,
+                         xmin_valid - xmin:xmax_valid - xmax + width],
         canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
 
 

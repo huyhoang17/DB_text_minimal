@@ -58,7 +58,6 @@ def main(args):
 
     dbnet = load_model(args.model_path, args.device)
 
-    # TEST_IMG_DIR = "/home/phan.huy.hoang/phh_workspace/data/totaltext/totaltext/Images/Test"
     test_img_fps = sorted(glob.glob(os.path.join(args.image_dir, "*")))
 
     result_poly_preds = []
