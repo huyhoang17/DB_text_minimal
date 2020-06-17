@@ -1,9 +1,9 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.modules.resnet import resnet18
-from src.modules.segmentation_head import DBHead
-from src.modules.segmentation_body import FPN
+from modules.resnet import resnet18
+from modules.segmentation_head import DBHead
+from modules.segmentation_body import FPN
 
 backbone_dict = {'resnet18': {'models': resnet18, 'out': [64, 128, 256, 512]}}
 segmentation_body_dict = {'FPN': FPN}

@@ -47,7 +47,6 @@ def test_preprocess(img,
 
 
 class DBTextDetectionHandler(BaseHandler):
-
     def __init__(self):
         super().__init__()
 

@@ -27,11 +27,25 @@ make test-all
 
 ```bash
 # for iou-based pascal-eval
-make ioueval
+make ioueval  # not recommend for polygon ground-truth
 
 # for overlap-based det-eval
 make deteval
 ```
+
+### History
+
+#### Train history
+
+![](./assets/train_history.png)
+
+#### Test history
+
+![](./assets/test_history.png)
+
+![](./assets/test_img_history_01.png)
+
+![](./assets/test_img_history_02.png)
 
 ### Results
 
@@ -46,6 +60,18 @@ make deteval
 - Rotated rectangle result
 
 ![](./assets/rect_result_foo.jpg)
+
+### Metric evaluation (DetEval - P/R/HMean)
+
+```bash
+# for TotalText dataset
+make deteval
+```
+
+| Method                   | image size | init lr | b-thresh | p-thresh | unclip ratio | Precision (%) | Recall (%) | F-measure (%) |
+|:--------------------------:|:-------:|:--------:|:--------:|:--------:|:--------:|:--------:|:------------:|:---------------:|
+| TotalText-resnet18-fcn | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.70 | 0.64 | 0.67 |
+
 
 ### TODO
 

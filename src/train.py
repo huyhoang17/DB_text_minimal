@@ -24,7 +24,7 @@ from postprocess import SegDetectorRepresenter
 
 warnings.filterwarnings('ignore')
 # https://github.com/pytorch/pytorch/issues/1355
-# cv2.setNumThreads(0)
+cv2.setNumThreads(0)
 
 
 def get_data_loaders(cfg):
@@ -61,7 +61,7 @@ def get_data_loaders(cfg):
 def main(cfg):
 
     # set determinism
-    # setup_determinism(42)
+    setup_determinism(42)
 
     # setup logger
     logger = setup_logger(

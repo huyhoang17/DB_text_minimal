@@ -1,6 +1,7 @@
 # custom
 config.yaml
 nohup.out
+.vscode/
 *_env/
 env_*/
 tmp/
@@ -11,6 +12,7 @@ notebooks/
 model_store/
 assets/*
 !assets/*_foo.jpg
+!assets/*_history*.png
 *.ipynb
 
 # Byte-compiled / optimized / DLL files
@@ -23,7 +25,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+build/ 	
 develop-eggs/
 dist/
 downloads/

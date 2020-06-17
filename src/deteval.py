@@ -38,16 +38,18 @@ class DetectionDetEvalEvaluator(object):
         def one_to_one_match(row, col):
             cont = 0
             for j in range(len(recallMat[0])):
-                if recallMat[row,
-                             j] >= self.area_recall_constraint and precisionMat[
-                                 row, j] >= self.area_precision_constraint:
+                if recallMat[
+                        row,
+                        j] >= self.area_recall_constraint and precisionMat[
+                            row, j] >= self.area_precision_constraint:
                     cont = cont + 1
             if (cont != 1):
                 return False
             cont = 0
             for i in range(len(recallMat)):
                 if recallMat[
-                        i, col] >= self.area_recall_constraint and precisionMat[
+                        i,
+                        col] >= self.area_recall_constraint and precisionMat[
                             i, col] >= self.area_precision_constraint:
                     cont = cont + 1
             if (cont != 1):
@@ -258,9 +260,8 @@ class DetectionDetEvalEvaluator(object):
                         # in deteval we have to make other validation before mark as one-to-one
                         if num_overlaps_gt(gtNum) >= 2:
                             gtRectMat[gtNum] = 1
-                            recallAccum += (self.mtype_oo_o
-                                            if len(matchesDet) == 1 else
-                                            self.mtype_om_o)
+                            recallAccum += (self.mtype_oo_o if len(matchesDet)
+                                            == 1 else self.mtype_om_o)
                             precisionAccum += (self.mtype_oo_o
                                                if len(matchesDet) == 1 else
                                                self.mtype_om_o *
@@ -292,9 +293,9 @@ class DetectionDetEvalEvaluator(object):
                         # in deteval we have to make other validation before mark as one-to-one
                         if num_overlaps_det(detNum) >= 2:
                             detRectMat[detNum] = 1
-                            recallAccum += (self.mtype_oo_o
-                                            if len(matchesGt) == 1 else
-                                            self.mtype_om_m * len(matchesGt))
+                            recallAccum += (self.mtype_oo_o if len(matchesGt)
+                                            == 1 else self.mtype_om_m *
+                                            len(matchesGt))
                             precisionAccum += (self.mtype_oo_o
                                                if len(matchesGt) == 1 else
                                                self.mtype_om_m)
