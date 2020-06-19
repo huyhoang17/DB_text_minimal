@@ -15,27 +15,11 @@ import db_transforms
 from utils import dict_to_device, minmax_scaler_img
 
 
-def load_metadata(img_dir, gt_dir):
-    img_fps = glob.glob(os.path.join(img_dir, "*"))
-    gt_fps = []
-    for img_fp in img_fps:
-        img_id = img_fp.split("/")[-1].replace("img", "").split(".")[0]
-        gt_fn = "gt_img{}.txt".format(img_id)
-        gt_fp = os.path.join(gt_dir, gt_fn)
-        assert os.path.exists(img_fp)
-        gt_fps.append(gt_fp)
-    assert len(img_fps) == len(gt_fps)
-
-    return img_fps, gt_fps
-
-
-class TotalTextDatasetIter(Dataset):
-    """
-    Data iteration for TotalText dataset
-    """
+class BaseDatasetIter(Dataset):
     def __init__(self,
-                 image_paths,
-                 gt_paths,
+                 train_dir,
+                 train_gt_dir,
+                 ignore_tags,
                  is_training=True,
                  image_size=640,
                  min_text_size=8,
@@ -46,8 +30,9 @@ class TotalTextDatasetIter(Dataset):
                  mean=[103.939, 116.779, 123.68],
                  debug=False):
 
-        self.image_paths = image_paths
-        self.gt_paths = gt_paths
+        self.train_dir = train_dir
+        self.train_gt_dir = train_gt_dir
+        self.ignore_tags = ignore_tags
 
         self.is_training = is_training
         self.image_size = image_size
@@ -60,11 +45,15 @@ class TotalTextDatasetIter(Dataset):
             self.augment = self._get_default_augment()
 
         self.mean = mean
-
-        self.all_anns = self.load_all_anns(gt_paths)
-        assert len(self.image_paths) == len(self.all_anns)
-
         self.debug = debug
+
+        # load metadata
+        self.image_paths, self.gt_paths = self.load_metadata(
+            train_dir, train_gt_dir)
+
+        # load annotation for totaltext dataset
+        self.all_anns = self.load_all_anns(self.gt_paths)
+        assert len(self.image_paths) == len(self.all_anns)
 
     def _get_default_augment(self):
         augment_seq = iaa.Sequential([
@@ -73,27 +62,6 @@ class TotalTextDatasetIter(Dataset):
             iaa.Resize((0.5, 3.0))
         ])
         return augment_seq
-
-    def load_all_anns(self, gt_paths):
-        res = []
-        for gt in gt_paths:
-            lines = []
-            reader = open(gt, 'r').readlines()
-            for line in reader:
-                item = {}
-                parts = line.strip().split(',')
-                label = parts[-1]
-                line = [i.strip('\ufeff').strip('\xef\xbb\xbf') for i in parts]
-                num_points = math.floor((len(line) - 1) / 2) * 2
-                poly = np.array(list(map(float, line[:num_points]))).reshape(
-                    (-1, 2)).tolist()
-                if len(poly) < 3:
-                    continue
-                item['poly'] = poly
-                item['text'] = label
-                lines.append(item)
-            res.append(lines)
-        return res
 
     def __len__(self):
         return len(self.image_paths)
@@ -139,7 +107,7 @@ class TotalTextDatasetIter(Dataset):
             # generate gt and mask
             if polygon.area < 1 or \
                     min(height, width) < self.min_text_size or \
-                    ann['text'] == '#':
+                    ann['text'] in self.ignore_tags:
                 ignore_tags.append(True)
                 cv2.fillPoly(mask, poly.astype(np.int32)[np.newaxis, :, :], 0)
                 continue
@@ -204,19 +172,213 @@ class TotalTextDatasetIter(Dataset):
         return data_return
 
 
+class TotalTextDatasetIter(BaseDatasetIter):
+    """
+    Data iteration for TotalText dataset
+    """
+    def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
+        super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
+
+    def load_metadata(self, img_dir, gt_dir):
+        img_fps = sorted(glob.glob(os.path.join(img_dir, "*")))
+        gt_fps = []
+        for img_fp in img_fps:
+            img_id = img_fp.split("/")[-1].replace("img", "").split(".")[0]
+            gt_fn = "gt_img{}.txt".format(img_id)
+            gt_fp = os.path.join(gt_dir, gt_fn)
+            assert os.path.exists(img_fp)
+            gt_fps.append(gt_fp)
+        assert len(img_fps) == len(gt_fps)
+
+        return img_fps, gt_fps
+
+    def load_all_anns(self, gt_paths):
+        res = []
+        for gt in gt_paths:
+            lines = []
+            reader = open(gt, 'r').readlines()
+            for line in reader:
+                item = {}
+                parts = line.strip().split(',')
+                label = parts[-1]
+                line = [i.strip('\ufeff').strip('\xef\xbb\xbf') for i in parts]
+                num_points = math.floor((len(line) - 1) / 2) * 2
+                poly = np.array(list(map(float, line[:num_points]))).reshape(
+                    (-1, 2)).tolist()
+                if len(poly) < 3:
+                    continue
+                item['poly'] = poly
+                item['text'] = label
+                lines.append(item)
+            res.append(lines)
+        return res
+
+
+class CTW1500DatasetIter(BaseDatasetIter):
+    def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
+        super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
+
+    def load_metadata(self, img_dir, gt_dir):
+        img_fps = sorted(glob.glob(os.path.join(img_dir, "*")))
+        gt_fps = []
+        for img_fp in img_fps:
+            img_id = img_fp.split("/")[-1][:-4]
+            gt_fn = "{}.txt".format(img_id)
+            gt_fp = os.path.join(gt_dir, gt_fn)
+            assert os.path.exists(img_fp)
+            gt_fps.append(gt_fp)
+        assert len(img_fps) == len(gt_fps)
+
+        return img_fps, gt_fps
+
+    def load_all_anns(self, gt_fps):
+        """
+        Reference: https://github.com/whai362/PSENet/blob/master/dataset/ctw1500_loader.py
+        """
+        res = []
+        for gt_fp in gt_fps:
+            lines = []
+            with open(gt_fp, 'r') as f:
+                for line in f:
+                    item = {}
+                    gt = line.strip().strip('\ufeff').strip('\xef\xbb\xbf')
+                    gt = list(map(int, gt.split(',')))
+
+                    x1 = np.int(gt[0])
+                    y1 = np.int(gt[1])
+                    bbox = [np.int(gt[i]) for i in range(4, 32)]
+                    bbox = np.asarray(bbox) + ([x1 * 1, y1 * 1] * 14)
+                    bbox = bbox.reshape(-1, 2).tolist()
+                    item['poly'] = bbox
+                    item['text'] = 'True'
+                    lines.append(item)
+            res.append(lines)
+        return res
+
+
+class ICDAR2015DatasetIter(BaseDatasetIter):
+    def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
+        super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
+
+    def load_metadata(self, img_dir, gt_dir):
+        img_fps = glob.glob(os.path.join(img_dir, "*"))
+        gt_fps = []
+        for img_fp in img_fps:
+            img_id = img_fp.split("/")[-1].split(".")[0]
+            gt_fn = "gt_{}.txt".format(img_id)
+            gt_fp = os.path.join(gt_dir, gt_fn)
+            assert os.path.exists(img_fp)
+            gt_fps.append(gt_fp)
+        assert len(img_fps) == len(gt_fps)
+
+        return img_fps, gt_fps
+
+    def load_all_anns(self, gt_fps):
+        res = []
+        for gt_fp in gt_fps:
+            lines = []
+            with open(gt_fp, 'r') as f:
+                for line in f:
+                    item = {}
+                    gt = line.strip().strip('\ufeff').strip(
+                        '\xef\xbb\xbf').split(",")
+                    label = ",".join(gt[8:])
+                    poly = list(map(int, gt[:8]))
+                    poly = np.asarray(poly).reshape(-1, 2).tolist()
+                    item['poly'] = poly
+                    item['text'] = label
+                    lines.append(item)
+                import pdb
+                pdb.set_trace()
+            res.append(lines)
+        return res
+
+
+class MSRATD500DatasetIter(BaseDatasetIter):
+    def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
+        super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
+
+    def transform_four_points(self, points, center_point, theta):
+        """Reference: https://stackoverflow.com/questions/622140
+        """
+        theta = -theta
+        new_coords = []
+        x_center, y_center = center_point
+
+        for point in points:
+            x, y = point
+            x_new = x_center + (x - x_center) * np.cos(theta) + \
+                (y - y_center) * np.sin(theta)
+            y_new = y_center - (x - x_center) * np.sin(theta) + \
+                (y - y_center) * np.cos(theta)
+            x_new = int(x_new)
+            y_new = int(y_new)
+            new_coords.append((x_new, y_new))
+        return new_coords
+
+    def load_metadata(self, img_dir, gt_dir=None):
+        # ignore gt_dir
+        img_fps = sorted(glob.glob(os.path.join(img_dir, "*.JPG")))
+        gt_fps = sorted(glob.glob(os.path.join(img_dir, "*.gt")))
+        assert len(img_fps) == len(gt_fps)
+
+        return img_fps, gt_fps
+
+    def load_all_anns(self, gt_fps):
+        res = []
+        for gt_fp in gt_fps:
+            lines = []
+            with open(gt_fp, 'r') as f:
+                for line in f:
+                    item = {}
+                    line = list(map(float, line.strip().split()))
+                    index, dif, x_min, y_min, w, h, theta = line
+                    if int(dif) == 1:  # difficult label
+                        continue
+
+                    c1 = (x_min, y_min)
+                    c2 = (x_min + w, y_min)
+                    c3 = (x_min + w, y_min + h)
+                    c4 = (x_min, y_min + h)
+                    center = (x_min + w / 2, y_min + h / 2)
+                    rot_box = self.transform_four_points([c1, c2, c3, c4],
+                                                         center, theta)
+                    rot_box = np.array(rot_box).tolist()
+
+                    item['poly'] = rot_box
+                    item['text'] = 'True'
+                    lines.append(item)
+            res.append(lines)
+        return res
+
+
 @hydra.main(config_path="../config.yaml", strict=False)
 def run(cfg):
-    image_paths, gt_paths = load_metadata(cfg.data.totaltext.train_dir,
-                                          cfg.data.totaltext.train_gt_dir)
-    totaltext_train_iter = TotalTextDatasetIter(image_paths,
-                                                gt_paths,
-                                                is_training=True,
-                                                debug=False)
-    totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
-                                        batch_size=1,
-                                        shuffle=True,
-                                        num_workers=1)
-    samples = next(iter(totaltext_train_loader))
+    dataset_name = cfg.dataset.name
+    ignore_tags = cfg.data[dataset_name].ignore_tags
+    train_dir = cfg.data[dataset_name].train_dir
+    train_gt_dir = cfg.data[dataset_name].train_gt_dir
+
+    if dataset_name == 'totaltext':
+        TextDatasetIter = TotalTextDatasetIter
+    elif dataset_name == 'ctw1500':
+        TextDatasetIter = CTW1500DatasetIter
+    elif dataset_name == 'icdar2015':
+        TextDatasetIter = ICDAR2015DatasetIter
+    elif dataset_name == 'msra_td500':
+        TextDatasetIter = MSRATD500DatasetIter
+    else:
+        raise NotImplementedError("Pls provide valid dataset name!")
+    train_iter = TextDatasetIter(train_dir,
+                                 train_gt_dir,
+                                 ignore_tags,
+                                 is_training=True,
+                                 debug=False)
+    train_loader = DataLoader(dataset=train_iter,
+                              batch_size=1,
+                              shuffle=True,
+                              num_workers=1)
+    samples = next(iter(train_loader))
     samples = dict_to_device(samples, device='cpu')
     for k, v in samples.items():
         if isinstance(v, torch.Tensor):

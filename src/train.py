@@ -13,7 +13,6 @@ import torch.optim as torch_optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from data_loaders import (load_metadata, TotalTextDatasetIter)
 from losses import DBLoss
 from lr_schedulers import WarmupPolyLR
 from models import DBTextModel
@@ -29,33 +28,50 @@ cv2.setNumThreads(0)
 
 def get_data_loaders(cfg):
 
-    # train
-    tt_train_img_fps, tt_train_gt_fps = load_metadata(
-        cfg.data.totaltext.train_dir, cfg.data.totaltext.train_gt_dir)
-    # test
-    tt_test_img_fps, tt_test_gt_fps = load_metadata(
-        cfg.data.totaltext.test_dir, cfg.data.totaltext.test_gt_dir)
+    dataset_name = cfg.dataset.name
+    ignore_tags = cfg.data[dataset_name].ignore_tags
+    train_dir = cfg.data[dataset_name].train_dir
+    test_dir = cfg.data[dataset_name].test_dir
+    train_gt_dir = cfg.data[dataset_name].train_gt_dir
+    test_gt_dir = cfg.data[dataset_name].test_gt_dir
 
-    totaltext_train_iter = TotalTextDatasetIter(tt_train_img_fps,
-                                                tt_train_gt_fps,
-                                                image_size=cfg.hps.img_size,
-                                                is_training=True,
-                                                debug=False)
-    totaltext_test_iter = TotalTextDatasetIter(tt_test_img_fps,
-                                               tt_test_gt_fps,
-                                               image_size=cfg.hps.img_size,
-                                               is_training=False,
-                                               debug=False)
+    if dataset_name == 'totaltext':
+        from data_loaders import TotalTextDatasetIter
+        TextDatasetIter = TotalTextDatasetIter
+    elif dataset_name == 'ctw1500':
+        from data_loaders import CTW1500DatasetIter
+        TextDatasetIter = CTW1500DatasetIter
+    elif dataset_name == 'icdar2015':
+        from data_loaders import ICDAR2015DatasetIter
+        TextDatasetIter = ICDAR2015DatasetIter
+    elif dataset_name == 'msra_td500':
+        from data_loaders import MSRATD500DatasetIter
+        TextDatasetIter = MSRATD500DatasetIter
+    else:
+        raise NotImplementedError("Pls provide valid dataset name!")
 
-    totaltext_train_loader = DataLoader(dataset=totaltext_train_iter,
-                                        batch_size=cfg.hps.batch_size,
-                                        shuffle=True,
-                                        num_workers=1)
-    totaltext_test_loader = DataLoader(dataset=totaltext_test_iter,
-                                       batch_size=cfg.hps.test_batch_size,
-                                       shuffle=False,
-                                       num_workers=0)
-    return totaltext_train_loader, totaltext_test_loader
+    train_iter = TextDatasetIter(train_dir,
+                                 train_gt_dir,
+                                 ignore_tags,
+                                 image_size=cfg.hps.img_size,
+                                 is_training=True,
+                                 debug=False)
+    test_iter = TextDatasetIter(test_dir,
+                                test_gt_dir,
+                                ignore_tags,
+                                image_size=cfg.hps.img_size,
+                                is_training=False,
+                                debug=False)
+
+    train_loader = DataLoader(dataset=train_iter,
+                              batch_size=cfg.hps.batch_size,
+                              shuffle=True,
+                              num_workers=1)
+    test_loader = DataLoader(dataset=test_iter,
+                             batch_size=cfg.hps.test_batch_size,
+                             shuffle=False,
+                             num_workers=0)
+    return train_loader, test_loader
 
 
 def main(cfg):
@@ -120,6 +136,9 @@ def main(cfg):
             verbose=True)
 
     # get data loaders
+    dataset_name = cfg.dataset.name
+    logger.info("Dataset name: {}".format(dataset_name))
+    logger.info("Ignore tags: {}".format(cfg.data[dataset_name].ignore_tags))
     totaltext_train_loader, totaltext_test_loader = get_data_loaders(cfg)
 
     # train model
