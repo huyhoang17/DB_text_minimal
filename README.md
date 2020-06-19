@@ -99,3 +99,4 @@ make deteval
 - [DBNet.pytorch](https://github.com/WenmuZhou/DBNet.pytorch)
 - [DBNet.keras](https://github.com/xuannianz/DifferentiableBinarization/)
 - [Real-time-Text-Detection](https://github.com/SURFZJY/Real-time-Text-Detection)
+- [PSENet.pytorch](https://github.com/whai362/PSENet)

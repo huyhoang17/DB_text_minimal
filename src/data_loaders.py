@@ -173,9 +173,6 @@ class BaseDatasetIter(Dataset):
 
 
 class TotalTextDatasetIter(BaseDatasetIter):
-    """
-    Data iteration for TotalText dataset
-    """
     def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
         super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
 

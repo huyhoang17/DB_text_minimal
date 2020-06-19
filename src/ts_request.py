@@ -22,10 +22,8 @@ def load_args():
 
 
 def main(args):
-    url = "http://{}:{}/{}/{}".format(
-        args.host, args.port,
-        args.mode, args.model_name
-    )
+    url = "http://{}:{}/{}/{}".format(args.host, args.port, args.mode,
+                                      args.model_name)
     image_path = args.image_path
     with open(image_path, "rb") as f:
         data = f.read()
