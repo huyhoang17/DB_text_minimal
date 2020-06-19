@@ -24,7 +24,6 @@ class DBTextModel(nn.Module):
         self.backbone = backbone_model(pretrained=pretrained)
         self.segmentation_body = segmentation_body_dict[
             segmentation_body_name](backbone_out, inner_channels=256)
-        print(self.segmentation_body.out_channels)
         self.segmentation_head = segmentation_head_dict[
             segmentation_head_name](self.segmentation_body.out_channels,
                                     out_channels=2)

@@ -77,11 +77,12 @@ make deteval
 
 - [ ] Support other dataset
 	- [x] [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
-	- [ ] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
+	- [x] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
 	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
 	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
-	- [ ] [CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
-	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14)
+	- [x] [SCUT-CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
+	- [x] [MSRA-TD500](http://www.iapr-tc11.org/mediawiki/index.php/MSRA_Text_Detection_500_Database_(MSRA-TD500))
+	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14) (included Total-Text, SCUT-CTW1500 and Baidu Curved Scene Text)
 - [ ] Convert code to pytorch-lightning
 - [x] Serve model with Torchserve
 - [x] Add metric callbacks (P/R/F1)

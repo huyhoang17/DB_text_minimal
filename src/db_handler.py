@@ -53,7 +53,6 @@ class DBTextDetectionHandler(BaseHandler):
         self.model = None
         self.device = None
         self.initialized = False
-        self.tmp_dir = "/home/phan.huy.hoang/phh_workspace/DB_text_minimal/tmp"
 
     def initialize(self, ctx):
         self.manifest = ctx.manifest
@@ -97,9 +96,6 @@ class DBTextDetectionHandler(BaseHandler):
         for pred in data:
             prob_mask = (pred[0] * 255).astype(np.uint8)
             thresh_mask = (pred[1] * 255).astype(np.uint8)
-            imageio.imwrite(os.path.join(self.tmp_dir, "foo1.jpg"), prob_mask)
-            imageio.imwrite(os.path.join(self.tmp_dir, "foo2.jpg"),
-                            thresh_mask)
             prob_mask = prob_mask.tolist()
             thresh_mask = thresh_mask.tolist()
             res.append({"prob_mask": prob_mask, "thresh_mask": thresh_mask})

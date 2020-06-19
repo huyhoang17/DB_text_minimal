@@ -17,7 +17,7 @@ deteval:
 train: lint
 	python3 src/train.py
 
-img_path=./assets/foo23.jpg
+img_path=./assets/foo.jpg
 model_path=./models/db_resnet18.pth
 thresh=0.25
 box_thresh=0.50
@@ -53,12 +53,13 @@ test-rect:
 test-all: test-heatmap test-poly test-rect
 
 # MODEL SERVING
+model_name=dbtext
 save-jit:
 	python3 src/save_jit.py
 
 ts-archive:
 	torch-model-archiver \
-	--model-name dbtext \
+	--model-name $(model_name) \
 	--version 1.0 \
 	--serialized-file /home/phan.huy.hoang/phh_workspace/DB_text_minimal/models/db_resnet18_jit.pt \
 	--handler /home/phan.huy.hoang/phh_workspace/DB_text_minimal/src/db_handler.py \
@@ -67,12 +68,15 @@ ts-archive:
 ts-start:
 	torchserve --start \
 	--model-store model_store \
-	--models dbtext=dbtext.mar
+	--models $(model_name)=dbtext.mar
 
 ts-stop:
 	torchserve --stop
 
-ts-restart: save-jit ts-archive ts-start
+ts-restart: ts-stop ts-archive ts-start
 
 ts-curl:
 	curl -X POST http://127.0.0.1:8080/predictions/dbtext -T ./assets/foo.jpg
+
+ts-request:
+	python3 src/ts_request.py --image_path ./assets/foo.jpg
