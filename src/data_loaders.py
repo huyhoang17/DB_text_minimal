@@ -51,7 +51,7 @@ class BaseDatasetIter(Dataset):
         self.image_paths, self.gt_paths = self.load_metadata(
             train_dir, train_gt_dir)
 
-        # load annotation for totaltext dataset
+        # load annotation
         self.all_anns = self.load_all_anns(self.gt_paths)
         assert len(self.image_paths) == len(self.all_anns)
 
@@ -173,9 +173,6 @@ class BaseDatasetIter(Dataset):
 
 
 class TotalTextDatasetIter(BaseDatasetIter):
-    """
-    Data iteration for TotalText dataset
-    """
     def __init__(self, train_dir, train_gt_dir, ignore_tags, **kwargs):
         super().__init__(train_dir, train_gt_dir, ignore_tags, **kwargs)
 
@@ -247,7 +244,7 @@ class CTW1500DatasetIter(BaseDatasetIter):
                     x1 = np.int(gt[0])
                     y1 = np.int(gt[1])
                     bbox = [np.int(gt[i]) for i in range(4, 32)]
-                    bbox = np.asarray(bbox) + ([x1 * 1, y1 * 1] * 14)
+                    bbox = np.asarray(bbox) + ([x1, y1] * 14)
                     bbox = bbox.reshape(-1, 2).tolist()
                     item['poly'] = bbox
                     item['text'] = 'True'
@@ -288,8 +285,6 @@ class ICDAR2015DatasetIter(BaseDatasetIter):
                     item['poly'] = poly
                     item['text'] = label
                     lines.append(item)
-                import pdb
-                pdb.set_trace()
             res.append(lines)
         return res
 

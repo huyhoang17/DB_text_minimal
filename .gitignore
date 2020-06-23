@@ -11,7 +11,8 @@ outputs/
 notebooks/
 model_store/
 assets/*
-!assets/*_foo.jpg
+!assets/tt_*.jpg
+!assets/ctw_*.jpg
 !assets/*_history*.png
 *.ipynb
 
