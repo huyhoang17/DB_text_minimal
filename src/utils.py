@@ -204,7 +204,11 @@ def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
     plt.imshow(np_img)
     plt.imshow(pred_prob, cmap='jet', alpha=args.alpha)
     img_fn = "heatmap_result_{}".format(img_fn)
-    plt.savefig(os.path.join(args.save_dir, img_fn), bbox_inches='tight')
+    plt.savefig(
+        os.path.join(args.save_dir, img_fn),
+        dpi=200,
+        bbox_inches='tight'
+    )
     gc.collect()
 
 
@@ -237,5 +241,9 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds):
         img_fn = "poly_result_{}".format(img_fn)
     else:
         img_fn = "rect_result_{}".format(img_fn)
-    plt.savefig(os.path.join(args.save_dir, img_fn), bbox_inches='tight')
+    plt.savefig(
+        os.path.join(args.save_dir, img_fn),
+        dpi=200,
+        bbox_inches='tight'
+    )
     gc.collect()

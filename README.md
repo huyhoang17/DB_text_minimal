@@ -3,7 +3,7 @@
 [![](http://ForTheBadge.com/images/badges/built-with-love.svg)](https://github.com/huyhoang17/DB_text_minimal)
 [![](https://forthebadge.com/images/badges/makes-people-smile.svg)](https://forthebadge.com)
 
-# A Pytorch implementation of DB-Text paper
+# A Pytorch implementation of [DB-Text paper](https://arxiv.org/abs/1911.08947)
 
 ### Command
 
@@ -33,7 +33,7 @@ make ioueval  # not recommend for polygon ground-truth
 make deteval
 ```
 
-### History
+### History (on TotalText dataset)
 
 #### Train history
 
@@ -47,19 +47,20 @@ make deteval
 
 ![](./assets/test_img_history_02.png)
 
-### Results
+### Some results on TotalText's test dataset
 
-- Heatmap
+| Heatmap | Polygon | Rotated rectangle |
+|:-----:|:-----:|:-----:|
+| ![](./assets/tt_heatmap_01.jpg) | ![](./assets/tt_poly_01.jpg) |  ![](./assets/tt_rect_01.jpg) |
+| ![](./assets/tt_heatmap_02.jpg) | ![](./assets/tt_poly_02.jpg) |  ![](./assets/tt_rect_02.jpg) |
+| ![](./assets/tt_heatmap_03.jpg) | ![](./assets/tt_poly_03.jpg) |  ![](./assets/tt_rect_03.jpg) |
 
-![](./assets/heatmap_result_foo.jpg)
+### Text-line detection (model trained on CTW1500 dataset)
 
-- Polygon result
-
-![](./assets/poly_result_foo.jpg)
-
-- Rotated rectangle result
-
-![](./assets/rect_result_foo.jpg)
+| Origin image | Text-line detected |
+|:-----:|:-----:|
+| ![](./assets/ctw_gt_01.jpg) | ![](./assets/ctw_result_01.jpg) |
+| ![](./assets/ctw_gt_02.jpg) | ![](./assets/ctw_result_02.jpg) |
 
 ### Metric evaluation (DetEval - P/R/HMean)
 
@@ -68,14 +69,15 @@ make deteval
 make deteval
 ```
 
-| Method                   | image size | init lr | b-thresh | p-thresh | unclip ratio | Precision (%) | Recall (%) | F-measure (%) |
+| Method                   | image size | init lr | b-thresh | p-thresh | unclip ratio | Precision | Recall | F-measure |
 |:--------------------------:|:-------:|:--------:|:--------:|:--------:|:--------:|:--------:|:------------:|:---------------:|
-| TotalText-resnet18-fcn | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.70 | 0.64 | 0.67 |
+| TotalText-resnet18-fcn (word-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.70 | 0.64 | 0.67 |
+| CTW1500-resnet18-fcn (line-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.83 | 0.66 | 0.74 |
 
 
-### TODO
+### ToDo
 
-- [ ] Support other dataset
+- [ ] Support other datasets
 	- [x] [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
 	- [x] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
 	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
@@ -88,9 +90,12 @@ make deteval
 - [x] Add metric callbacks (P/R/F1)
 - [x] Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval)
 - [x] Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
+- [ ] Add TedEval metric evaluation
 - [ ] Model quantization
 - [ ] Model pruning
 - [ ] Docker / docker-compose
+- [ ] Integrate with ONNX
+- [ ] Integrate with TensorRT
 
 ### Reference
 
@@ -100,3 +105,5 @@ make deteval
 - [DBNet.keras](https://github.com/xuannianz/DifferentiableBinarization/)
 - [Real-time-Text-Detection](https://github.com/SURFZJY/Real-time-Text-Detection)
 - [PSENet.pytorch](https://github.com/whai362/PSENet)
+- [volksdep](https://github.com/Media-Smart/volksdep)
+- [TedEval](https://github.com/clovaai/TedEval)
