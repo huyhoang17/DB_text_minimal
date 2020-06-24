@@ -80,22 +80,20 @@ make deteval
 - [ ] Support other datasets
 	- [x] [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
 	- [x] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
-	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
-	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
 	- [x] [SCUT-CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
 	- [x] [MSRA-TD500](http://www.iapr-tc11.org/mediawiki/index.php/MSRA_Text_Detection_500_Database_(MSRA-TD500))
+	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
+	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
 	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14) (included Total-Text, SCUT-CTW1500 and Baidu Curved Scene Text)
 - [ ] Convert code to pytorch-lightning
 - [x] Serve model with Torchserve
 - [x] Add metric callbacks (P/R/F1)
 - [x] Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval)
 - [x] Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
-- [ ] Add TedEval metric evaluation
 - [ ] Model quantization
 - [ ] Model pruning
 - [ ] Docker / docker-compose
-- [ ] Integrate with ONNX
-- [ ] Integrate with TensorRT
+- [ ] Integrate with ONNX, TensorRT
 
 ### Reference
 
@@ -107,3 +105,4 @@ make deteval
 - [PSENet.pytorch](https://github.com/whai362/PSENet)
 - [volksdep](https://github.com/Media-Smart/volksdep)
 - [TedEval](https://github.com/clovaai/TedEval)
+- [torch2trt](https://github.com/NVIDIA-AI-IOT/torch2trt)

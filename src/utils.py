@@ -234,7 +234,9 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds):
         box_list, score_list = [], []
 
     tmp_img = draw_bbox(img_origin, box_list)
-    tmp_pred = cv2.resize(preds[0, 0, :, :].numpy(), (w_origin, h_origin))
+    tmp_pred = cv2.resize(
+        preds[0, 0, :, :].cpu().numpy(), (w_origin, h_origin)
+    )
     plt.imshow(tmp_img)
     plt.imshow(tmp_pred, cmap='inferno', alpha=args.alpha)
     if args.is_output_polygon:
