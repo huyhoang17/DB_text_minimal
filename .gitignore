@@ -13,6 +13,7 @@ model_store/
 assets/*
 !assets/tt_*.jpg
 !assets/ctw_*.jpg
+!assets/ocr_*.jpg
 !assets/*_history*.png
 *.ipynb
 

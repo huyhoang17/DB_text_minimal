@@ -6,14 +6,16 @@ import argparse
 import torch
 
 from models import DBTextModel
-from utils import (device, read_img, test_preprocess, visualize_heatmap,
+from utils import (read_img, test_preprocess, visualize_heatmap,
                    visualize_polygon, str_to_bool)
 
 
-def load_model(model_path):
-    assert os.path.exists(model_path)
-    dbnet = DBTextModel().to(device)
-    dbnet.load_state_dict(torch.load(model_path, map_location=device))
+def load_model(args):
+    assert os.path.exists(args.model_path)
+    dbnet = DBTextModel().to(args.device)
+    dbnet.load_state_dict(
+        torch.load(args.model_path, map_location=args.device)
+    )
     return dbnet
 
 
@@ -24,6 +26,7 @@ def load_args():
                         type=str,
                         default='./models/db_resnet18.pth')
     parser.add_argument('--save_dir', type=str, default='./assets')
+    parser.add_argument('--device', type=str, default='cpu')
 
     # for heatmap
     parser.add_argument('--prob_thred', type=float, default=0.5)
@@ -45,7 +48,7 @@ def main(net, args):
     img_fn = img_path.split("/")[-1]
     assert os.path.exists(img_path)
     img_origin, h_origin, w_origin = read_img(img_path)
-    tmp_img = test_preprocess(img_origin, to_tensor=True, pad=False).to(device)
+    tmp_img = test_preprocess(img_origin, to_tensor=True, pad=False).to(args.device)
 
     net.eval()
     torch.cuda.empty_cache()
@@ -66,6 +69,9 @@ def main(net, args):
 
 if __name__ == '__main__':
     args = load_args()
-    dbnet = load_model(args.model_path)
+
+    if not torch.cuda.is_available():
+        args.device = 'cpu'
+    dbnet = load_model(args)
 
     main(dbnet, args)

@@ -62,6 +62,16 @@ make deteval
 | ![](./assets/ctw_gt_01.jpg) | ![](./assets/ctw_result_01.jpg) |
 | ![](./assets/ctw_gt_02.jpg) | ![](./assets/ctw_result_02.jpg) |
 
+### Full pipeline
+
+- Recognition model was trained on lmdb dataset.
+
+![](./assets/ocr_01.jpg)
+
+![](./assets/ocr_02.jpg)
+
+![](./assets/ocr_03.jpg)
+
 ### Metric evaluation (DetEval - P/R/HMean)
 
 ```bash
@@ -74,28 +84,26 @@ make deteval
 | TotalText-resnet18-fcn (word-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.70 | 0.64 | 0.67 |
 | CTW1500-resnet18-fcn (line-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.83 | 0.66 | 0.74 |
 
-
 ### ToDo
 
 - [ ] Support other datasets
 	- [x] [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
 	- [x] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
-	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
-	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
 	- [x] [SCUT-CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
 	- [x] [MSRA-TD500](http://www.iapr-tc11.org/mediawiki/index.php/MSRA_Text_Detection_500_Database_(MSRA-TD500))
+	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
+	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
 	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14) (included Total-Text, SCUT-CTW1500 and Baidu Curved Scene Text)
 - [ ] Convert code to pytorch-lightning
 - [x] Serve model with Torchserve
 - [x] Add metric callbacks (P/R/F1)
 - [x] Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval)
 - [x] Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
-- [ ] Add TedEval metric evaluation
 - [ ] Model quantization
 - [ ] Model pruning
 - [ ] Docker / docker-compose
-- [ ] Integrate with ONNX
-- [ ] Integrate with TensorRT
+- [ ] Integrate with ONNX, TensorRT
+- [x] Baseline text recognition model
 
 ### Reference
 
@@ -105,5 +113,7 @@ make deteval
 - [DBNet.keras](https://github.com/xuannianz/DifferentiableBinarization/)
 - [Real-time-Text-Detection](https://github.com/SURFZJY/Real-time-Text-Detection)
 - [PSENet.pytorch](https://github.com/whai362/PSENet)
+- [deep-text-recognition-benchmark](https://github.com/clovaai/deep-text-recognition-benchmark)
 - [volksdep](https://github.com/Media-Smart/volksdep)
 - [TedEval](https://github.com/clovaai/TedEval)
+- [torch2trt](https://github.com/NVIDIA-AI-IOT/torch2trt)
