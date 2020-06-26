@@ -62,6 +62,16 @@ make deteval
 | ![](./assets/ctw_gt_01.jpg) | ![](./assets/ctw_result_01.jpg) |
 | ![](./assets/ctw_gt_02.jpg) | ![](./assets/ctw_result_02.jpg) |
 
+### Full pipeline
+
+- Recognition model was trained on lmdb dataset.
+
+![](./assets/ocr_01.jpg)
+
+![](./assets/ocr_02.jpg)
+
+![](./assets/ocr_03.jpg)
+
 ### Metric evaluation (DetEval - P/R/HMean)
 
 ```bash
@@ -73,7 +83,6 @@ make deteval
 |:--------------------------:|:-------:|:--------:|:--------:|:--------:|:--------:|:--------:|:------------:|:---------------:|
 | TotalText-resnet18-fcn (word-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.70 | 0.64 | 0.67 |
 | CTW1500-resnet18-fcn (line-level) | 640 | 0.005 | 0.25 | 0.50 | 1.50 | 0.83 | 0.66 | 0.74 |
-
 
 ### ToDo
 
@@ -94,6 +103,7 @@ make deteval
 - [ ] Model pruning
 - [ ] Docker / docker-compose
 - [ ] Integrate with ONNX, TensorRT
+- [x] Baseline text recognition model
 
 ### Reference
 
@@ -103,6 +113,7 @@ make deteval
 - [DBNet.keras](https://github.com/xuannianz/DifferentiableBinarization/)
 - [Real-time-Text-Detection](https://github.com/SURFZJY/Real-time-Text-Detection)
 - [PSENet.pytorch](https://github.com/whai362/PSENet)
+- [deep-text-recognition-benchmark](https://github.com/clovaai/deep-text-recognition-benchmark)
 - [volksdep](https://github.com/Media-Smart/volksdep)
 - [TedEval](https://github.com/clovaai/TedEval)
 - [torch2trt](https://github.com/NVIDIA-AI-IOT/torch2trt)
