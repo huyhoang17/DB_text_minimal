@@ -271,7 +271,7 @@ def main(cfg):
                 tfb_writer.add_scalar('TEST/ACC_IOU/val_iou_shrink_map',
                                       test_iou_shrink_map, global_steps)
 
-                # Cal P/R/Hmean - iou-based pascas-eval
+                # Cal P/R/Hmean
                 batch_shape = {'shape': [(cfg.hps.img_size, cfg.hps.img_size)]}
                 box_list, score_list = seg_obj(
                     batch_shape,

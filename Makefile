@@ -18,7 +18,7 @@ train: lint
 	python3 src/train.py
 
 cwd=$(CURDIR)
-serve_dir=model_store
+serve_dir=$(cwd)/model_store
 img_path=$(cwd)/assets/foo5.jpg
 model_path=$(cwd)/models/db_resnet18.pth
 # model_path=./models/ctw_best_cp_1806.pth
@@ -87,13 +87,13 @@ ts-stop:
 ts-restart: ts-stop ts-archive ts-start
 
 ts-curl:
-	curl -X POST http://127.0.0.1:8080/predictions/dbtext -T $(cwd)/assets/foo.jpg
+	curl -X POST http://127.0.0.1:8080/predictions/$(model_name) -T $(cwd)/assets/foo.jpg
 
 ts-request:
 	python3 $(cwd)/src/ts_request.py --image_path $(cwd)/assets/foo.jpg
 
 ### TEXT RECOGNITION
-rect_model_path=/home/phan.huy.hoang/phh_workspace/clova_ocr/saved_models/None-ResNet-BiLSTM-Attn-Seed1111/best_norm_ED.pth
+rect_model_path=$(cwd)/models/recognition/best_norm_ED.pth
 # cropped char images
 test-img:
 	python3 $(cwd)/src/test_ocr.py \
@@ -121,10 +121,11 @@ test-folder:
 test-pp:
 	python3 $(cwd)/src/test_ocr.py \
 	--device $(device) \
-	--img_path $(cwd)/assets/foo18.jpg \
-	--out_path $(cwd)/tmp/ocr_01.jpg \
+	--img_path $(cwd)/assets/foo.jpg \
+	--out_path $(cwd)/tmp/ocr_04.jpg \
 	--workers 1 \
 	--batch_size 1 \
+	--det_model_path $(model_path) \
 	--saved_model $(rect_model_path) \
 	--Transformation None --FeatureExtraction ResNet \
 	--SequenceModeling BiLSTM --Prediction Attn

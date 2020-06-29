@@ -1,6 +1,8 @@
 import os
 import gc
+import glob
 import random
+import imageio
 import logging
 
 import cv2
@@ -204,11 +206,9 @@ def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
     plt.imshow(np_img)
     plt.imshow(pred_prob, cmap='jet', alpha=args.alpha)
     img_fn = "heatmap_result_{}".format(img_fn)
-    plt.savefig(
-        os.path.join(args.save_dir, img_fn),
-        dpi=200,
-        bbox_inches='tight'
-    )
+    plt.savefig(os.path.join(args.save_dir, img_fn),
+                dpi=200,
+                bbox_inches='tight')
     gc.collect()
 
 
@@ -233,19 +233,35 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds):
     else:
         box_list, score_list = [], []
 
-    tmp_img = draw_bbox(img_origin, box_list)
-    tmp_pred = cv2.resize(
-        preds[0, 0, :, :].cpu().numpy(), (w_origin, h_origin)
-    )
+    tmp_img = draw_bbox(img_origin, np.array(box_list))
+    tmp_pred = cv2.resize(preds[0, 0, :, :].cpu().numpy(),
+                          (w_origin, h_origin))
+
+    # https://stackoverflow.com/questions/42262198
+    h_, w_ = 32, 100
+    if not args.is_output_polygon:
+
+        char_img_fps = glob.glob(os.path.join("./tmp/reconized", "*"))
+        for char_img_fp in char_img_fps:
+            os.remove(char_img_fp)
+
+        for index, (box_list_,
+                    score_list_) in enumerate(zip(box_list,
+                                                  score_list)):  # noqa
+            src_pts = np.array(box_list_.tolist(), dtype=np.float32)
+            dst_pts = np.array([[0, 0], [w_, 0], [w_, h_], [0, h_]],
+                               dtype=np.float32)
+            M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+            warp = cv2.warpPerspective(img_origin, M, (w_, h_))
+            imageio.imwrite("./tmp/reconized/word_{}.jpg".format(index), warp)
+
     plt.imshow(tmp_img)
     plt.imshow(tmp_pred, cmap='inferno', alpha=args.alpha)
     if args.is_output_polygon:
         img_fn = "poly_result_{}".format(img_fn)
     else:
         img_fn = "rect_result_{}".format(img_fn)
-    plt.savefig(
-        os.path.join(args.save_dir, img_fn),
-        dpi=200,
-        bbox_inches='tight'
-    )
+    plt.savefig(os.path.join(args.save_dir, img_fn),
+                dpi=200,
+                bbox_inches='tight')
     gc.collect()
