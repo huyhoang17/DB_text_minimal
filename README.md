@@ -9,7 +9,7 @@
 
 #### Train model
 
-- Modify hyperparameters in config.yaml
+- Modify parameters in config.yaml
 
 ```bash
 make train
@@ -26,10 +26,10 @@ make test-all
 - For evaluation metric, please refer to [this](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval) repository
 
 ```bash
-# for iou-based pascal-eval
+# iou-based Pascal
 make ioueval  # not recommend for polygon ground-truth
 
-# for overlap-based det-eval
+# overlap-based DetEval
 make deteval
 ```
 
@@ -55,7 +55,7 @@ make deteval
 | ![](./assets/tt_heatmap_02.jpg) | ![](./assets/tt_poly_02.jpg) |  ![](./assets/tt_rect_02.jpg) |
 | ![](./assets/tt_heatmap_03.jpg) | ![](./assets/tt_poly_03.jpg) |  ![](./assets/tt_rect_03.jpg) |
 
-### Text-line detection (model trained on CTW1500 dataset)
+### Text-line detection (the model trained on CTW1500 dataset)
 
 | Origin image | Text-line detected |
 |:-----:|:-----:|
@@ -64,7 +64,7 @@ make deteval
 
 ### Full pipeline
 
-- Recognition model was trained on lmdb dataset.
+- Recognition model was trained on lmdb dataset
 
 ![](./assets/ocr_01.jpg)
 

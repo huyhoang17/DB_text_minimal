@@ -13,9 +13,8 @@ from utils import (read_img, test_preprocess, visualize_heatmap,
 def load_model(args):
     assert os.path.exists(args.model_path)
     dbnet = DBTextModel().to(args.device)
-    dbnet.load_state_dict(
-        torch.load(args.model_path, map_location=args.device)
-    )
+    dbnet.load_state_dict(torch.load(args.model_path,
+                                     map_location=args.device))
     return dbnet
 
 
@@ -48,7 +47,8 @@ def main(net, args):
     img_fn = img_path.split("/")[-1]
     assert os.path.exists(img_path)
     img_origin, h_origin, w_origin = read_img(img_path)
-    tmp_img = test_preprocess(img_origin, to_tensor=True, pad=False).to(args.device)
+    tmp_img = test_preprocess(img_origin, to_tensor=True,
+                              pad=False).to(args.device)
 
     net.eval()
     torch.cuda.empty_cache()
