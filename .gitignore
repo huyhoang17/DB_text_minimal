@@ -14,6 +14,7 @@ assets/*
 !assets/tt_*.jpg
 !assets/ctw_*.jpg
 !assets/ocr_*.jpg
+!assets/*.gif
 !assets/*_history*.png
 *.ipynb
 

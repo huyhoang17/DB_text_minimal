@@ -5,6 +5,12 @@
 
 # A Pytorch implementation of [DB-Text paper](https://arxiv.org/abs/1911.08947)
 
+*Make awesome things that matter.*
+
+<p align="center">
+  <img src="./assets/out.gif" />
+</p>
+
 ### Command
 
 #### Train model
