@@ -15,7 +15,7 @@
 
 #### Train model
 
-- Modify parameters in config.yaml
+- Modify some configuration in config.yaml
 
 ```bash
 make train
@@ -29,11 +29,11 @@ make test-all
 
 #### Evaluate model
 
-- For evaluation metric, please refer to [this](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval) repository
+- For evaluation metric, please refer to [MegReader](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval) repository
 
 ```bash
 # iou-based Pascal
-make ioueval  # not recommend for polygon ground-truth
+make ioueval
 
 # overlap-based DetEval
 make deteval
@@ -41,11 +41,11 @@ make deteval
 
 ### History (on TotalText dataset)
 
-#### Train history
+#### Train data
 
 ![](./assets/train_history.png)
 
-#### Test history
+#### Test data
 
 ![](./assets/test_history.png)
 
@@ -53,7 +53,7 @@ make deteval
 
 ![](./assets/test_img_history_02.png)
 
-### Some results on TotalText's test dataset
+### Test dataset (TotalText)
 
 | Heatmap | Polygon | Rotated rectangle |
 |:-----:|:-----:|:-----:|
@@ -63,14 +63,14 @@ make deteval
 
 ### Text-line detection (the model trained on CTW1500 dataset)
 
-| Origin image | Text-line detected |
+| Image origin | Text-line detected |
 |:-----:|:-----:|
 | ![](./assets/ctw_gt_01.jpg) | ![](./assets/ctw_result_01.jpg) |
 | ![](./assets/ctw_gt_02.jpg) | ![](./assets/ctw_result_02.jpg) |
 
 ### Full pipeline
 
-- Recognition model was trained on lmdb dataset
+- Recognition model was trained on [MJSynth](http://www.robots.ox.ac.uk/~vgg/data/text/) and [SynthText](http://www.robots.ox.ac.uk/~vgg/data/scenetext/) dataset
 
 ![](./assets/ocr_01.jpg)
 
@@ -92,26 +92,28 @@ make deteval
 
 ### ToDo
 
-- [ ] Support other datasets
+- [ ] Support datasets
 	- [x] [TotalText](https://github.com/cs-chan/Total-Text-Dataset)
 	- [x] [ICDAR2015](https://rrc.cvc.uab.es/?ch=4)
 	- [x] [SCUT-CTW1500](https://github.com/Yuliang-Liu/Curve-Text-Detector)
 	- [x] [MSRA-TD500](http://www.iapr-tc11.org/mediawiki/index.php/MSRA_Text_Detection_500_Database_(MSRA-TD500))
 	- [ ] [COCO-Text](https://rrc.cvc.uab.es/?ch=5)
 	- [ ] [Synthtext](https://www.robots.ox.ac.uk/~vgg/data/scenetext/)
-	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14) (included Total-Text, SCUT-CTW1500 and Baidu Curved Scene Text)
-- [ ] Convert code to pytorch-lightning
-- [x] Serve model with Torchserve
-- [x] Add metric callbacks (P/R/F1)
-- [x] Add metric & code evaluation (P/R/F1 - IoU-based Pascal eval)
-- [x] Add metric & code evaluation (P/R/F1 - Overlap-based DetEval eval)
+	- [ ] [ArT2019](https://rrc.cvc.uab.es/?ch=14) (included Total-Text, SCUT-CTW1500 and Baidu Curved Scene Text dataset)
+- [ ] Pytorch-lightning
+- [x] Model serving with Torchserve
+- [x] Metric callback (P/R/F1)
+- [x] IoU-based metric (P/R/F1 - Pascal)
+- [x] Overlap-based metric (P/R/F1 - DetEval)
 - [ ] Model quantization
 - [ ] Model pruning
 - [ ] Docker / docker-compose
-- [ ] Integrate with ONNX, TensorRT
-- [x] Baseline text recognition model
+- [ ] ONNX, TensorRT
+- [x] Text recognition model
 
 ### Reference
+
+I got a lot of code from [DBNet.pytorch](https://github.com/WenmuZhou/DBNet.pytorch), thanks to [@WenmuZhou](https://github.com/WenmuZhou)
 
 - [Real-time Scene Text Detection with Differentiable Binarization](https://arxiv.org/abs/1911.08947)
 - [Evaluation metrics](https://github.com/Megvii-CSG/MegReader/blob/master/concern/icdar2015_eval)
