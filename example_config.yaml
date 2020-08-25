@@ -1,5 +1,5 @@
 meta:
-  root_dir: 
+  root_dir: /home/phan.huy.hoang/phh_workspace/DB_text_minimal
   round_number: 8
   debug: False
   device: cuda
@@ -9,7 +9,7 @@ hps:
   batch_size: 4
   test_batch_size: 1  # must be set to 1 to evaluate metric
   img_size: 640
-  no_epochs: 50
+  no_epochs: 100
   warmup_epochs: 10
   no_classes: 2
   log_iter: 50
@@ -26,12 +26,32 @@ callbacks:
 
 data:
   totaltext:
-    train_dir: 
-    test_dir: 
-    train_gt_dir: 
-    test_gt_dir: 
+    train_dir: /home/phan.huy.hoang/phh_workspace/data/totaltext/totaltext/Images/Train
+    test_dir: /home/phan.huy.hoang/phh_workspace/data/totaltext/totaltext/Images/Test
+    train_gt_dir: /home/phan.huy.hoang/phh_workspace/data/totaltext/txt_format_v2/Train
+    test_gt_dir: /home/phan.huy.hoang/phh_workspace/data/totaltext/txt_format_v2/Test
+    ignore_tags: ["#"]
+  ctw1500:
+    train_dir: /home/phan.huy.hoang/phh_workspace/data/CTW1500/ctw1500/train/text_image/
+    test_dir: /home/phan.huy.hoang/phh_workspace/data/CTW1500/ctw1500/test/text_image/
+    train_gt_dir: /home/phan.huy.hoang/phh_workspace/data/CTW1500/ctw1500/train/text_label_curve/
+    test_gt_dir: /home/phan.huy.hoang/phh_workspace/data/CTW1500/ctw1500/test/text_label_curve/
+    ignore_tags: []
+  icdar2015:
+    train_dir: /home/phan.huy.hoang/phh_workspace/data/icdar2015_/train_imgs
+    test_dir: /home/phan.huy.hoang/phh_workspace/data/icdar2015_/test_imgs
+    train_gt_dir: /home/phan.huy.hoang/phh_workspace/data/icdar2015_/train_gts
+    test_gt_dir: /home/phan.huy.hoang/phh_workspace/data/icdar2015_/test_gts
+    ignore_tags: ["###"]
+  msra_td500:
+    train_dir: /home/phan.huy.hoang/phh_workspace/data/MSRA-TD500/train
+    test_dir: /home/phan.huy.hoang/phh_workspace/data/MSRA-TD500/test
+    train_gt_dir: /home/phan.huy.hoang/phh_workspace/data/MSRA-TD500/train
+    test_gt_dir: /home/phan.huy.hoang/phh_workspace/data/MSRA-TD500/test
+    ignore_tags: []
 
 dataset:
+  name: totaltext
   return_dict: True
 
 logging:
@@ -40,11 +60,15 @@ logging:
 loss:
 
 model:
+  finetune_cp_path:
+  best_cp_path: models/best_cp_0107.pth
+  last_cp_path: models/last_cp_0107.pth
+  best_hmean_cp_path: models/best_hmean_0107.pth
 
 optimizer:
   type: adam
   lr: 0.005
-  lr_finetune: 0.005
+  lr_finetune: 0.001
   weight_decay: 0.0
   reduction: mean
   alpha: 1
@@ -53,7 +77,7 @@ optimizer:
   amsgrad: False
 
 metric:
-  thred_text_score: 0.30
+  thred_text_score: 0.25
   prob_threshold: 0.50
   unclip_ratio: 1.50
   is_output_polygon: True
