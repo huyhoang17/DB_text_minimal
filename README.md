@@ -8,7 +8,7 @@
 *Make awesome things that matter.*
 
 <p align="center">
-  <img src="./assets/out.gif" />
+  <img src="./assets/demo.gif" />
 </p>
 
 ### Command

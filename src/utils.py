@@ -1,9 +1,11 @@
 import os
 import gc
 import glob
+import time
 import random
 import imageio
 import logging
+from functools import wraps
 
 import cv2
 import numpy as np
@@ -44,6 +46,18 @@ def setup_logger(logger_name='dbtext', log_file_path=None):
     logger.setLevel(logging.DEBUG)
 
     return logger
+
+
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(">>> Function {}: {}'s".format(func.__name__, end - start))
+        return result
+
+    return wrapper
 
 
 def to_device(batch, device='cuda'):
@@ -185,15 +199,17 @@ def test_preprocess(img,
     return img
 
 
-def draw_bbox(img_path, result, color=(255, 0, 0), thickness=3):
-    if isinstance(img_path, str):
-        img_path = cv2.imread(img_path)
-        # img_path = cv2.cvtColor(img_path, cv2.COLOR_BGR2RGB)
-    img_path = img_path.copy()
+def draw_bbox(img, result, color=(255, 0, 0), thickness=3):
+    """
+    :input: RGB img
+    """
+    if isinstance(img, str):
+        img = cv2.imread(img)
+    img = img.copy()
     for point in result:
         point = point.astype(int)
-        cv2.polylines(img_path, [point], True, color, thickness)
-    return img_path
+        cv2.polylines(img, [point], True, color, thickness)
+    return img
 
 
 def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
@@ -212,7 +228,7 @@ def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
     gc.collect()
 
 
-def visualize_polygon(args, img_fn, origin_info, batch, preds):
+def visualize_polygon(args, img_fn, origin_info, batch, preds, vis_char=False):
     img_origin, h_origin, w_origin = origin_info
     seg_obj = SegDetectorRepresenter(thresh=args.thresh,
                                      box_thresh=args.box_thresh,
@@ -239,7 +255,7 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds):
 
     # https://stackoverflow.com/questions/42262198
     h_, w_ = 32, 100
-    if not args.is_output_polygon:
+    if not args.is_output_polygon and vis_char:
 
         char_img_fps = glob.glob(os.path.join("./tmp/reconized", "*"))
         for char_img_fp in char_img_fps:

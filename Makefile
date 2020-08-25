@@ -19,14 +19,14 @@ train: lint
 
 cwd=$(CURDIR)
 serve_dir=$(cwd)/model_store
-img_path=$(cwd)/assets/foo5.jpg
+img_path=$(cwd)/assets/foo18.jpg
 model_path=$(cwd)/models/db_resnet18.pth
 # model_path=./models/ctw_best_cp_1806.pth
 # model_path=./models/quantized/db_resnet18_quantized.pth
 thresh=0.25
 box_thresh=0.50
 unclip_ratio=1.5
-device=cpu  # cpu / cuda
+device=cuda  # cpu / cuda
 
 # TESTING
 test-heatmap:
@@ -123,6 +123,30 @@ test-pp:
 	--device $(device) \
 	--img_path $(cwd)/assets/foo.jpg \
 	--out_path $(cwd)/tmp/ocr_04.jpg \
+	--workers 1 \
+	--batch_size 1 \
+	--det_model_path $(model_path) \
+	--saved_model $(rect_model_path) \
+	--Transformation None --FeatureExtraction ResNet \
+	--SequenceModeling BiLSTM --Prediction Attn
+
+test-webcam:
+	python3 $(cwd)/src/test_webcam.py \
+	--show_video \
+	--per_frame 1 \
+	--device $(device) \
+	--workers 1 \
+	--batch_size 1 \
+	--det_model_path $(model_path) \
+	--saved_model $(rect_model_path) \
+	--Transformation None --FeatureExtraction ResNet \
+	--SequenceModeling BiLSTM --Prediction Attn
+
+test-video:
+	python3 $(cwd)/src/test_webcam.py \
+	--video_path /home/phan.huy.hoang/testvideo.mp4 \
+	--per_frame 1 \
+	--device $(device) \
 	--workers 1 \
 	--batch_size 1 \
 	--det_model_path $(model_path) \
