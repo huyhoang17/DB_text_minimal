@@ -35,9 +35,9 @@ class OHEMBalanceCrossEntropyLoss(nn.Module):
 
         negative_loss, _ = torch.topk(negative_loss.view(-1), no_negative)
 
-        balance_loss = (positive_loss.sum() + negative_loss.sum()) / (
-            no_positive + no_negative + self.eps)
-        return balance_loss
+        return (positive_loss.sum() + negative_loss.sum()) / (
+            no_positive + no_negative + self.eps
+        )
 
 
 class DiceLoss(nn.Module):
@@ -74,12 +74,10 @@ class L1Loss(nn.Module):
 
     def forward(self, pred, gt, mask):
         if mask is not None:
-            loss = (torch.abs(pred - gt) * mask).sum() / \
-                (mask.sum() + self.eps)
-        else:
-            l1_loss_fn = torch.nn.L1Loss(reduction=self.reduction)
-            loss = l1_loss_fn(pred, gt)
-        return loss
+            return (torch.abs(pred - gt) * mask).sum() / (mask.sum() + self.eps)
+
+        l1_loss_fn = torch.nn.L1Loss(reduction=self.reduction)
+        return l1_loss_fn(pred, gt)
 
 
 class DBLoss(nn.Module):

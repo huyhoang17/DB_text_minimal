@@ -56,12 +56,9 @@ class BaseDatasetIter(Dataset):
         assert len(self.image_paths) == len(self.all_anns)
 
     def _get_default_augment(self):
-        augment_seq = iaa.Sequential([
-            iaa.Fliplr(0.5),
-            iaa.Affine(rotate=(-10, 10)),
-            iaa.Resize((0.5, 3.0))
-        ])
-        return augment_seq
+        return iaa.Sequential(
+            [iaa.Fliplr(0.5), iaa.Affine(rotate=(-10, 10)), iaa.Resize((0.5, 3.0))]
+        )
 
     def __len__(self):
         return len(self.image_paths)
@@ -181,7 +178,7 @@ class TotalTextDatasetIter(BaseDatasetIter):
         gt_fps = []
         for img_fp in img_fps:
             img_id = img_fp.split("/")[-1].replace("img", "").split(".")[0]
-            gt_fn = "gt_img{}.txt".format(img_id)
+            gt_fn = f"gt_img{img_id}.txt"
             gt_fp = os.path.join(gt_dir, gt_fn)
             assert os.path.exists(img_fp)
             gt_fps.append(gt_fp)
@@ -195,7 +192,6 @@ class TotalTextDatasetIter(BaseDatasetIter):
             lines = []
             reader = open(gt, 'r').readlines()
             for line in reader:
-                item = {}
                 parts = line.strip().split(',')
                 label = parts[-1]
                 line = [i.strip('\ufeff').strip('\xef\xbb\xbf') for i in parts]
@@ -204,8 +200,7 @@ class TotalTextDatasetIter(BaseDatasetIter):
                     (-1, 2)).tolist()
                 if len(poly) < 3:
                     continue
-                item['poly'] = poly
-                item['text'] = label
+                item = {'poly': poly, 'text': label}
                 lines.append(item)
             res.append(lines)
         return res
@@ -220,7 +215,7 @@ class CTW1500DatasetIter(BaseDatasetIter):
         gt_fps = []
         for img_fp in img_fps:
             img_id = img_fp.split("/")[-1][:-4]
-            gt_fn = "{}.txt".format(img_id)
+            gt_fn = f"{img_id}.txt"
             gt_fp = os.path.join(gt_dir, gt_fn)
             assert os.path.exists(img_fp)
             gt_fps.append(gt_fp)
@@ -237,7 +232,6 @@ class CTW1500DatasetIter(BaseDatasetIter):
             lines = []
             with open(gt_fp, 'r') as f:
                 for line in f:
-                    item = {}
                     gt = line.strip().strip('\ufeff').strip('\xef\xbb\xbf')
                     gt = list(map(int, gt.split(',')))
 
@@ -246,8 +240,7 @@ class CTW1500DatasetIter(BaseDatasetIter):
                     bbox = [np.int(gt[i]) for i in range(4, 32)]
                     bbox = np.asarray(bbox) + ([x1, y1] * 14)
                     bbox = bbox.reshape(-1, 2).tolist()
-                    item['poly'] = bbox
-                    item['text'] = 'True'
+                    item = {'poly': bbox, 'text': 'True'}
                     lines.append(item)
             res.append(lines)
         return res
@@ -262,7 +255,7 @@ class ICDAR2015DatasetIter(BaseDatasetIter):
         gt_fps = []
         for img_fp in img_fps:
             img_id = img_fp.split("/")[-1].split(".")[0]
-            gt_fn = "gt_{}.txt".format(img_id)
+            gt_fn = f"gt_{img_id}.txt"
             gt_fp = os.path.join(gt_dir, gt_fn)
             assert os.path.exists(img_fp)
             gt_fps.append(gt_fp)
@@ -276,14 +269,12 @@ class ICDAR2015DatasetIter(BaseDatasetIter):
             lines = []
             with open(gt_fp, 'r') as f:
                 for line in f:
-                    item = {}
                     gt = line.strip().strip('\ufeff').strip(
                         '\xef\xbb\xbf').split(",")
                     label = ",".join(gt[8:])
                     poly = list(map(int, gt[:8]))
                     poly = np.asarray(poly).reshape(-1, 2).tolist()
-                    item['poly'] = poly
-                    item['text'] = label
+                    item = {'poly': poly, 'text': label}
                     lines.append(item)
             res.append(lines)
         return res
@@ -325,7 +316,6 @@ class MSRATD500DatasetIter(BaseDatasetIter):
             lines = []
             with open(gt_fp, 'r') as f:
                 for line in f:
-                    item = {}
                     line = list(map(float, line.strip().split()))
                     index, dif, x_min, y_min, w, h, theta = line
                     if int(dif) == 1:  # difficult label
@@ -340,8 +330,7 @@ class MSRATD500DatasetIter(BaseDatasetIter):
                                                          center, theta)
                     rot_box = np.array(rot_box).tolist()
 
-                    item['poly'] = rot_box
-                    item['text'] = 'True'
+                    item = {'poly': rot_box, 'text': 'True'}
                     lines.append(item)
             res.append(lines)
         return res

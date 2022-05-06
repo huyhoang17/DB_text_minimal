@@ -112,8 +112,7 @@ def load_args():
                         default=256,
                         help='the size of the LSTM hidden state')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 class WrappedModel(nn.Module):
@@ -191,8 +190,7 @@ def predict(image_tensors, converter, model, args):
         # calculate confidence score (= multiply of pred_max_prob)
         confidence_score = pred_max_prob.cumprod(dim=0)[-1]
 
-        result = {"pred": pred, "score": float(confidence_score)}
-        return result
+        return {"pred": pred, "score": float(confidence_score)}
 
 
 def main(det_model, rec_model, args):
@@ -243,7 +241,7 @@ def main(det_model, rec_model, args):
             with torch.no_grad():
                 preds = det_model(img)
             end = time.time() - start
-            print(">>> Detect: {}'s".format(end))
+            print(f">>> Detect: {end}'s")
 
             batch = {'shape': [(h_origin, w_origin)]}
             box_list, score_list = seg_obj(batch,
@@ -260,8 +258,7 @@ def main(det_model, rec_model, args):
                 img_warps = []
                 h_, w_ = 32, 100
 
-                for index, (box_list_, score_list_) in enumerate(
-                        zip(box_list, score_list)):  # noqa
+                for box_list_, score_list_ in zip(box_list, score_list):
                     if score_list_ >= args.box_thresh:
                         src_pts = np.array(box_list_.tolist(), dtype=np.float32)
                         dst_pts = np.array([[0, 0], [w_, 0], [w_, h_], [0, h_]],
@@ -288,7 +285,7 @@ def main(det_model, rec_model, args):
 
             if args.video_path:
                 out.write(frame)
-            
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

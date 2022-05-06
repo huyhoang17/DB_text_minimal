@@ -117,7 +117,7 @@ class FPEM_FFM(nn.Module):
                                          kernel_size=1,
                                          inplace=inplace)
         self.fpems = nn.ModuleList()
-        for i in range(fpem_repeat):
+        for _ in range(fpem_repeat):
             self.fpems.append(FPEM(self.conv_out))
         self.out_channels = self.conv_out * 4
 
@@ -147,8 +147,7 @@ class FPEM_FFM(nn.Module):
         c5 = F.interpolate(c5_ffm, c2_ffm.size()[-2:])
         c4 = F.interpolate(c4_ffm, c2_ffm.size()[-2:])
         c3 = F.interpolate(c3_ffm, c2_ffm.size()[-2:])
-        Fy = torch.cat([c2_ffm, c3, c4, c5], dim=1)
-        return Fy
+        return torch.cat([c2_ffm, c3, c4, c5], dim=1)
 
 
 class FPEM(nn.Module):

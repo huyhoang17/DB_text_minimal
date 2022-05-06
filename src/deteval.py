@@ -64,35 +64,32 @@ class DetectionDetEvalEvaluator(object):
         def num_overlaps_gt(gtNum):
             cont = 0
             for detNum in range(len(detRects)):
-                if detNum not in detDontCareRectsNum:
-                    if recallMat[gtNum, detNum] > 0:
-                        cont = cont + 1
+                if detNum not in detDontCareRectsNum and recallMat[gtNum, detNum] > 0:
+                    cont = cont + 1
             return cont
 
         def num_overlaps_det(detNum):
             cont = 0
             for gtNum in range(len(recallMat)):
-                if gtNum not in gtDontCareRectsNum:
-                    if recallMat[gtNum, detNum] > 0:
-                        cont = cont + 1
+                if gtNum not in gtDontCareRectsNum and recallMat[gtNum, detNum] > 0:
+                    cont = cont + 1
             return cont
 
         def is_single_overlap(row, col):
-            if num_overlaps_gt(row) == 1 and num_overlaps_det(col) == 1:
-                return True
-            else:
-                return False
+            return num_overlaps_gt(row) == 1 and num_overlaps_det(col) == 1
 
         def one_to_many_match(gtNum):
             many_sum = 0
             detRects = []
             for detNum in range(len(recallMat[0])):
-                if gtRectMat[gtNum] == 0 and detRectMat[
-                        detNum] == 0 and detNum not in detDontCareRectsNum:
-                    if precisionMat[gtNum,
-                                    detNum] >= self.area_precision_constraint:
-                        many_sum += recallMat[gtNum, detNum]
-                        detRects.append(detNum)
+                if (
+                    gtRectMat[gtNum] == 0
+                    and detRectMat[detNum] == 0
+                    and detNum not in detDontCareRectsNum
+                    and precisionMat[gtNum, detNum] >= self.area_precision_constraint
+                ):
+                    many_sum += recallMat[gtNum, detNum]
+                    detRects.append(detNum)
             if round(many_sum, 4) >= self.area_recall_constraint:
                 return True, detRects
             else:
@@ -102,11 +99,14 @@ class DetectionDetEvalEvaluator(object):
             many_sum = 0
             gtRects = []
             for gtNum in range(len(recallMat)):
-                if gtRectMat[gtNum] == 0 and detRectMat[
-                        detNum] == 0 and gtNum not in gtDontCareRectsNum:
-                    if recallMat[gtNum, detNum] >= self.area_recall_constraint:
-                        many_sum += precisionMat[gtNum, detNum]
-                        gtRects.append(gtNum)
+                if (
+                    gtRectMat[gtNum] == 0
+                    and detRectMat[detNum] == 0
+                    and gtNum not in gtDontCareRectsNum
+                    and recallMat[gtNum, detNum] >= self.area_recall_constraint
+                ):
+                    many_sum += precisionMat[gtNum, detNum]
+                    gtRects.append(gtNum)
             if round(many_sum, 4) >= self.area_precision_constraint:
                 return True, gtRects
             else:
@@ -371,13 +371,11 @@ class DetectionDetEvalEvaluator(object):
         methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * \
             methodRecall * methodPrecision / (methodRecall + methodPrecision)
 
-        methodMetrics = {
+        return {
             'precision': methodPrecision,
             'recall': methodRecall,
-            'hmean': methodHmean
+            'hmean': methodHmean,
         }
-
-        return methodMetrics
 
 
 def load_args():
@@ -391,8 +389,7 @@ def load_args():
                         type=str,
                         default='./data/result_poly_preds.pkl')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
@@ -423,8 +420,6 @@ if __name__ == '__main__':
     with open(args.poly_preds_fp, "rb") as f:
         preds = pickle.load(f)
 
-    results = []
-    for gt, pred in zip(gts, preds):
-        results.append(evaluator.evaluate_image(gt, pred))
+    results = [evaluator.evaluate_image(gt, pred) for gt, pred in zip(gts, preds)]
     metrics = evaluator.combine_results(results)
     print(metrics)
