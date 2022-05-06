@@ -42,7 +42,7 @@ def load_rec_model(opt):
     model = WrappedModel(model).to(opt.device)
 
     # load model
-    print(">>> loading pretrained model from {}".format(opt.saved_model))
+    print(f">>> loading pretrained model from {opt.saved_model}")
     state_dict = torch.load(opt.saved_model, map_location=opt.device)
     model.load_state_dict(state_dict, strict=False)
     return model
@@ -81,7 +81,7 @@ def predict(image_tensors, converter, model, opt):
         else:
             start = time.time()
             preds = model(image, text_for_pred, is_train=False)
-            print(">>> Recognize: {}".format(time.time() - start))
+            print(f">>> Recognize: {time.time() - start}")
 
             # select max probabilty (greedy decoding) then decode index to character
             _, preds_index = preds.max(2)
@@ -110,7 +110,7 @@ def predict(image_tensors, converter, model, opt):
 
 def main(opt, dbnet):
 
-    print(">>> Devide: {}".format(opt.device))
+    print(f">>> Devide: {opt.device}")
 
     # TEXT DETECTION
     # (x, y, label)
@@ -130,7 +130,7 @@ def main(opt, dbnet):
     start = time.time()
     with torch.no_grad():
         preds = dbnet(tmp_img)
-    print(">>> Detect: {}'s".format(time.time() - start))
+    print(f">>> Detect: {time.time() - start}'s")
 
     seg_obj = SegDetectorRepresenter(thresh=opt.thresh,
                                      box_thresh=opt.box_thresh,
@@ -158,13 +158,13 @@ def main(opt, dbnet):
 
     # https://stackoverflow.com/questions/42262198
     img_warps = []
-    h_, w_ = 32, 100
     if not opt.is_output_polygon:
 
         char_img_fps = glob.glob(os.path.join("./tmp/reconized", "*"))
         for char_img_fp in char_img_fps:
             os.remove(char_img_fp)
 
+        h_, w_ = 32, 100
         for index, (box_list_,
                     score_list_) in enumerate(zip(box_list,
                                                   score_list)):  # noqa
@@ -173,7 +173,7 @@ def main(opt, dbnet):
                                dtype=np.float32)
             M = cv2.getPerspectiveTransform(src_pts, dst_pts)
             warp = cv2.warpPerspective(img_origin, M, (w_, h_))
-            imageio.imwrite("./tmp/reconized/word_{}.jpg".format(index), warp)
+            imageio.imwrite(f"./tmp/reconized/word_{index}.jpg", warp)
             img_warps.append((box_list_.tolist()[0], warp))
 
     # TEXT RECOGNITION
@@ -182,7 +182,7 @@ def main(opt, dbnet):
     else:
         converter = AttnLabelConverter(opt.character, opt.device)
     opt.num_class = len(converter.character)
-    print(">>> no class: {}".format(opt.num_class))
+    print(f">>> no class: {opt.num_class}")
 
     if opt.rgb:
         opt.input_channel = 3
@@ -190,7 +190,7 @@ def main(opt, dbnet):
     rec_model = Model(opt)
     rec_model = WrappedModel(rec_model).to(opt.device)
 
-    print(">>> loading pretrained model from {}".format(opt.saved_model))
+    print(f">>> loading pretrained model from {opt.saved_model}")
     state_dict = torch.load(opt.saved_model, map_location=opt.device)
     rec_model.load_state_dict(state_dict, strict=False)
 
@@ -299,8 +299,7 @@ def load_args():
                         default=256,
                         help='the size of the LSTM hidden state')
 
-    opt = parser.parse_args()
-    return opt
+    return parser.parse_args()
 
 
 if __name__ == '__main__':

@@ -17,20 +17,18 @@ def load_args():
     parser.add_argument('--host', type=str, default='localhost')
     parser.add_argument('--port', type=str, default='8080')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main(args):
-    url = "http://{}:{}/{}/{}".format(args.host, args.port, args.mode,
-                                      args.model_name)
+    url = f"http://{args.host}:{args.port}/{args.mode}/{args.model_name}"
     image_path = args.image_path
     with open(image_path, "rb") as f:
         data = f.read()
 
     start = time.time()
     resp = requests.post(url, data=data).text
-    print("REST took: {}'s".format(time.time() - start))
+    print(f"REST took: {time.time() - start}'s")
     resp = json.loads(resp)
     prob_mask = np.array(resp["prob_mask"]).astype(np.uint8)
     thresh_mask = np.array(resp["thresh_mask"]).astype(np.uint8)

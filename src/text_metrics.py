@@ -16,11 +16,10 @@ class RunningScore:
 
         if np.sum((label_pred[mask] < 0)) > 0:
             print(label_pred[label_pred < 0])
-        hist = np.bincount(n_class * label_true[mask].astype(int) +
-                           label_pred[mask],
-                           minlength=n_class**2).reshape(n_class, n_class)
-
-        return hist
+        return np.bincount(
+            n_class * label_true[mask].astype(int) + label_pred[mask],
+            minlength=n_class**2,
+        ).reshape(n_class, n_class)
 
     def update(self, label_trues, label_preds):
         for lt, lp in zip(label_trues, label_preds):
@@ -29,7 +28,6 @@ class RunningScore:
                     lt.flatten(), lp.flatten(), self.n_classes)
             except Exception as e:
                 print(e)
-                pass
 
     def get_scores(self):
         """Returns accuracy score evaluation result.
@@ -116,7 +114,6 @@ class QuadMetric:
             filename: the original filenames of images.
         output: (polygons, ...)
         '''
-        results = []
         # gt_polyons_batch = batch['text_polys']
         # ignore_tags_batch = batch['ignore_tags']
 
@@ -150,16 +147,17 @@ class QuadMetric:
         # ]
         gt_polygons_batch = to_list_tuples_coords(batch['anns'])
         ignore_tags_batch = [i[0].tolist() for i in batch['ignore_tags']]
-        gt = []
-        for gt_polygon, ignore_tag in zip(gt_polygons_batch,
-                                          ignore_tags_batch):
-            gt.append({'points': gt_polygon, 'ignore': ignore_tag})
+        gt = [
+            {'points': gt_polygon, 'ignore': ignore_tag}
+            for gt_polygon, ignore_tag in zip(gt_polygons_batch, ignore_tags_batch)
+        ]
 
-        pred = []  # for 1 image
-        for pred_polygon, pred_score in zip(pred_polygons_batch[0],
-                                            pred_scores_batch[0]):
-            pred.append({'points': pred_polygon, 'ignore': False})
-        results.append(self.evaluator.evaluate_image(gt, pred))
+        pred = [
+            {'points': pred_polygon, 'ignore': False}
+            for pred_polygon, pred_score in zip(
+                pred_polygons_batch[0], pred_scores_batch[0]
+            )
+        ]
 
         # 4 points only!!!
         # for polygons, pred_polygons, pred_scores, ignore_tags in zip(
@@ -188,7 +186,7 @@ class QuadMetric:
         #                     dict(points=pred_polygons[i, :, :].astype(np.int)))
         #         # pred = [dict(points=pred_polygons[i,:,:].tolist()) if pred_scores[i] >= box_thresh for i in range(pred_polygons.shape[0])]
         #     results.append(self.evaluator.evaluate_image(gt, pred))
-        return results
+        return [self.evaluator.evaluate_image(gt, pred)]
 
     def validate_measure(self,
                          batch,

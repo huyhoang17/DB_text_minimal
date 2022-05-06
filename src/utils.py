@@ -54,7 +54,7 @@ def timer(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(">>> Function {}: {}'s".format(func.__name__, end - start))
+        print(f">>> Function {func.__name__}: {end - start}'s")
         return result
 
     return wrapper
@@ -81,9 +81,7 @@ def dict_to_device(batch, device='cuda'):
 def to_list_tuples_coords(anns):
     new_anns = []
     for ann in anns:
-        points = []
-        for x, y in ann:
-            points.append((x[0].tolist(), y[0].tolist()))
+        points = [(x[0].tolist(), y[0].tolist()) for x, y in ann]
         new_anns.append(points)
     return new_anns
 
@@ -104,7 +102,7 @@ def str_to_bool(value):
         return False
     elif value.lower() in {'True', 'true', 't', '1', 'yes', 'y'}:
         return True
-    raise ValueError('{} is not a valid boolean value'.format(value))
+    raise ValueError(f'{value} is not a valid boolean value')
 
 
 def minmax_scaler_img(img):
@@ -130,8 +128,7 @@ def visualize_tfb(tfb_writer,
     imgs_grid = torch_utils.make_grid(imgs)
     imgs_grid = torch.unsqueeze(imgs_grid, 0)
     # imgs_grid.shape = (3, image_size, image_size * batch_size)
-    tfb_writer.add_images('{}/origin_imgs'.format(mode), imgs_grid,
-                          global_steps)
+    tfb_writer.add_images(f'{mode}/origin_imgs', imgs_grid, global_steps)
 
     # pred_prob_map / pred_thresh_map
     pred_prob_map = preds[:, 0, :, :]
@@ -151,10 +148,8 @@ def visualize_tfb(tfb_writer,
     thres_grid = torch.unsqueeze(thres_grid, 0)
     thres_grid = thres_grid.detach().to('cpu')
 
-    tfb_writer.add_images('{}/prob_imgs'.format(mode), probs_grid,
-                          global_steps)
-    tfb_writer.add_images('{}/thres_imgs'.format(mode), thres_grid,
-                          global_steps)
+    tfb_writer.add_images(f'{mode}/prob_imgs', probs_grid, global_steps)
+    tfb_writer.add_images(f'{mode}/thres_imgs', thres_grid, global_steps)
 
 
 def test_resize(img, size=640, pad=False):
@@ -221,7 +216,7 @@ def visualize_heatmap(args, img_fn, tmp_img, tmp_pred):
         (1, 2, 0)))
     plt.imshow(np_img)
     plt.imshow(pred_prob, cmap='jet', alpha=args.alpha)
-    img_fn = "heatmap_result_{}".format(img_fn)
+    img_fn = f"heatmap_result_{img_fn}"
     plt.savefig(os.path.join(args.save_dir, img_fn),
                 dpi=200,
                 bbox_inches='tight')
@@ -253,14 +248,14 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds, vis_char=False):
     tmp_pred = cv2.resize(preds[0, 0, :, :].cpu().numpy(),
                           (w_origin, h_origin))
 
-    # https://stackoverflow.com/questions/42262198
-    h_, w_ = 32, 100
     if not args.is_output_polygon and vis_char:
 
         char_img_fps = glob.glob(os.path.join("./tmp/reconized", "*"))
         for char_img_fp in char_img_fps:
             os.remove(char_img_fp)
 
+        # https://stackoverflow.com/questions/42262198
+        h_, w_ = 32, 100
         for index, (box_list_,
                     score_list_) in enumerate(zip(box_list,
                                                   score_list)):  # noqa
@@ -269,14 +264,14 @@ def visualize_polygon(args, img_fn, origin_info, batch, preds, vis_char=False):
                                dtype=np.float32)
             M = cv2.getPerspectiveTransform(src_pts, dst_pts)
             warp = cv2.warpPerspective(img_origin, M, (w_, h_))
-            imageio.imwrite("./tmp/reconized/word_{}.jpg".format(index), warp)
+            imageio.imwrite(f"./tmp/reconized/word_{index}.jpg", warp)
 
     plt.imshow(tmp_img)
     plt.imshow(tmp_pred, cmap='inferno', alpha=args.alpha)
     if args.is_output_polygon:
-        img_fn = "poly_result_{}".format(img_fn)
+        img_fn = f"poly_result_{img_fn}"
     else:
-        img_fn = "rect_result_{}".format(img_fn)
+        img_fn = f"rect_result_{img_fn}"
     plt.savefig(os.path.join(args.save_dir, img_fn),
                 dpi=200,
                 bbox_inches='tight')

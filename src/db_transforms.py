@@ -151,15 +151,16 @@ def crop(image, anns, max_tries=10, min_crop_side_ratio=0.1):
     h_regions = split_regions(h_axis)
     w_regions = split_regions(w_axis)
 
-    for i in range(max_tries):
+    for _ in range(max_tries):
         if len(w_regions) > 1:
             xmin, xmax = region_wise_random_select(w_regions)
         else:
             xmin, xmax = random_select(w_axis)
-        if len(h_regions) > 1:
-            ymin, ymax = region_wise_random_select(h_regions)
-        else:
-            ymin, ymax = random_select(h_axis)
+        ymin, ymax = (
+            region_wise_random_select(h_regions)
+            if len(h_regions) > 1
+            else random_select(h_axis)
+        )
 
         if xmax - xmin < min_crop_side_ratio * w or ymax - ymin < min_crop_side_ratio * h:
             # area too small
@@ -167,8 +168,12 @@ def crop(image, anns, max_tries=10, min_crop_side_ratio=0.1):
         new_anns = []
         for ann in anns:
             poly = np.array(ann['poly'])
-            if not (poly[:, 0].min() > xmax or poly[:, 0].max() < xmin
-                    or poly[:, 1].min() > ymax or poly[:, 1].max() < ymin):
+            if (
+                poly[:, 0].min() <= xmax
+                and poly[:, 0].max() >= xmin
+                and poly[:, 1].min() <= ymax
+                and poly[:, 1].max() >= ymin
+            ):
                 poly[:, 0] -= xmin
                 poly[:, 0] = np.clip(poly[:, 0], 0., (xmax - xmin - 1) * 1.)
                 poly[:, 1] -= ymin
@@ -176,7 +181,7 @@ def crop(image, anns, max_tries=10, min_crop_side_ratio=0.1):
                 new_ann = {'poly': poly.tolist(), 'text': ann['text']}
                 new_anns.append(new_ann)
 
-        if len(new_anns) > 0:
+        if new_anns:
             return image[ymin:ymax, xmin:xmax], new_anns
 
     return image, anns

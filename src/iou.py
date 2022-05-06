@@ -17,8 +17,7 @@ class DetectionIoUEvaluator(object):
             return pD.union(pG).area
 
         def get_intersection_over_union(pD, pG):
-            iou = get_intersection(pD, pG) / get_union(pD, pG)
-            return iou
+            return get_intersection(pD, pG) / get_union(pD, pG)
 
         def get_intersection(pD, pG):
             pD = Polygon(pD).buffer(0)
@@ -26,7 +25,6 @@ class DetectionIoUEvaluator(object):
             return pD.intersection(pG).area
 
         def compute_ap(confList, matchList, numGtCare):
-            correct = 0
             AP = 0
             if len(confList) > 0:
                 confList = np.array(confList)
@@ -34,6 +32,7 @@ class DetectionIoUEvaluator(object):
                 sorted_ind = np.argsort(-confList)
                 confList = confList[sorted_ind]
                 matchList = matchList[sorted_ind]
+                correct = 0
                 for n in range(len(confList)):
                     match = matchList[n]
                     if match:
@@ -205,13 +204,11 @@ class DetectionIoUEvaluator(object):
         methodHmean = 0 if methodRecall + methodPrecision == 0 else 2 * \
             methodRecall * methodPrecision / (methodRecall + methodPrecision)
 
-        methodMetrics = {
+        return {
             'precision': methodPrecision,
             'recall': methodRecall,
-            'hmean': methodHmean
+            'hmean': methodHmean,
         }
-
-        return methodMetrics
 
 
 def load_args():
@@ -225,8 +222,7 @@ def load_args():
                         type=str,
                         default='./data/result_poly_preds.pkl')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
@@ -278,9 +274,6 @@ if __name__ == '__main__':
     with open(args.poly_preds_fp, "rb") as f:
         preds = pickle.load(f)
 
-    results = []
-    # for each images
-    for gt, pred in zip(gts, preds):
-        results.append(evaluator.evaluate_image(gt, pred))
+    results = [evaluator.evaluate_image(gt, pred) for gt, pred in zip(gts, preds)]
     metrics = evaluator.combine_results(results)
     print(metrics)

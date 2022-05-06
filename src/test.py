@@ -38,8 +38,7 @@ def load_args():
     parser.add_argument('--is_output_polygon', type=str_to_bool, default=False)
     parser.add_argument('--alpha', type=float, default=0.6)
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main(net, args):
@@ -57,7 +56,7 @@ def main(net, args):
     start = time.time()
     with torch.no_grad():
         preds = net(tmp_img)
-    print(">>> Inference took {}'s".format(time.time() - start))
+    print(f">>> Inference took {time.time() - start}'s")
 
     if args.heatmap:
         visualize_heatmap(args, img_fn, tmp_img, preds.to('cpu')[0].numpy())

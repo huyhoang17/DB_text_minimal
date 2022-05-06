@@ -73,7 +73,7 @@ class DBTextDetectionHandler(BaseHandler):
     def preprocess(self, request):
 
         tensor_imgs = []
-        for _, data in enumerate(request):
+        for data in request:
             image = data.get("data")
             if image is None:
                 image = data.get("body")

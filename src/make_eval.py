@@ -42,8 +42,7 @@ def load_args():
                         default='./data/result_poly_preds.pkl')
     parser.add_argument('--img_fns_fp', type=str, default='./data/img_fns.pkl')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def to_list_tuples(sample):

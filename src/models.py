@@ -28,8 +28,9 @@ class DBTextModel(nn.Module):
             segmentation_head_name](self.segmentation_body.out_channels,
                                     out_channels=2)
 
-        self.name = '{}_{}_{}'.format(backbone_name, segmentation_body_name,
-                                      segmentation_head_name)
+        self.name = (
+            f'{backbone_name}_{segmentation_body_name}_{segmentation_head_name}'
+        )
 
     def forward(self, x):
         """
@@ -40,12 +41,9 @@ class DBTextModel(nn.Module):
         backbone_out = self.backbone(x)
         segmentation_body_out = self.segmentation_body(backbone_out)
         segmentation_head_out = self.segmentation_head(segmentation_body_out)
-        y = F.interpolate(segmentation_head_out,
-                          size=(H, W),
-                          mode='bilinear',
-                          align_corners=True)
-
-        return y
+        return F.interpolate(
+            segmentation_head_out, size=(H, W), mode='bilinear', align_corners=True
+        )
 
 
 if __name__ == '__main__':

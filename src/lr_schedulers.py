@@ -14,8 +14,9 @@ class WarmupPolyLR(torch.optim.lr_scheduler._LRScheduler):
                  **kwargs):
         if warmup_method not in ("constant", "linear"):
             raise ValueError(
-                "Only 'constant' or 'linear' warmup_method accepted "
-                "got {}".format(warmup_method))
+                f"Only 'constant' or 'linear' warmup_method accepted got {warmup_method}"
+            )
+
 
         self.target_lr = target_lr
         self.max_iters = max_iters
